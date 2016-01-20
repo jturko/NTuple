@@ -16,7 +16,7 @@ BIN_DIR		= $(HOME)/bin
 ROOTLIBS     	:= $(shell root-config --libs)
 ROOTINC      	:= -I$(shell root-config --incdir)
 
-COMMON_DIR 	= $(HOME)/Common
+COMMON_DIR 	= $(HOME)/CommandLineInterface
 
 INCLUDES        = -I$(COMMON_DIR) -I.
 
