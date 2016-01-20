@@ -24,7 +24,7 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     // isn't f->GetListOfKeys()->Contains("graph") what you are looking for?
 
     //----------------------------------------------------------------------------------------------------
-    // The follwoing assumes detector 1 is placed is position 1, and detector 2 is placed in position 2, etc.
+    // The following assumes detector 1 is placed is position 1, and detector 2 is placed in position 2, etc.
     // But that need not be the case!
 
     // Set LaBr3 Griffin Neighbours
