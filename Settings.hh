@@ -108,6 +108,13 @@ public:
         return 10000.5;
     }
 
+    enum Ion { kDeuteron, kCarbon, kProton, kAlpha, kElectron, kNeutron, kOther, kMax };
+    double Quenching(Ion scintIon){
+        if(scintIon < 0 || scintIon >= kMax) { std::cout << "error : scintIon outside of the enum range!" << std::endl; return -1.; }
+        else return fQuenching[scintIon];
+    }
+
+
 private:
     std::string fNtupleName;
 
@@ -134,6 +141,8 @@ private:
     std::map<std::string,int> fNofBins;
     std::map<std::string,double> fRangeLow;
     std::map<std::string,double> fRangeHigh;
+    
+    std::vector<double> fQuenching;
 };
 
 #endif

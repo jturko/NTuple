@@ -301,12 +301,15 @@ Settings::Settings(std::string fileName, int verbosityLevel)
         fTimeWindow[8030][detector][0] = env.GetValue(Form("Descant.Red.%d.TimeWindow.sec",detector),0.);
     }
     for(int detector = 0; detector < 20; ++detector) {
-        offset = env.GetValue(Form("Descant.White.%d.Resolution.Offset",detector),0.0);
-        linear = env.GetValue(Form("Descant.White.%d.Resolution.Linear",detector),0.0);
-        quadratic = env.GetValue(Form("Descant.White.%d.Resolution.Quadratic",detector),0.009);
-        cubic = env.GetValue(Form("Descant.White.%d.Resolution.Cubic",detector),0.0);
+        linear = env.GetValue(Form("Descant.White.%d.Resolution",detector),20.0);
         fResolution[8040][detector].push_back(TF1(Form("Descant.White.%d.Resolution",detector),
-                                                  Form("(TMath::Sqrt((%f+%f*x+%f*x*x+%f*x*x*x)))/(2.*TMath::Sqrt(2.*TMath::Log(2.)))",offset, linear, quadratic, cubic),0.,100000.));
+                                                  Form("%f*TMath::Sqrt(x)", linear),0.,100000.));
+        //offset = env.GetValue(Form("Descant.White.%d.Resolution.Offset",detector),0.0);
+        //linear = env.GetValue(Form("Descant.White.%d.Resolution.Linear",detector),0.0);
+        //quadratic = env.GetValue(Form("Descant.White.%d.Resolution.Quadratic",detector),0.009);
+        //cubic = env.GetValue(Form("Descant.White.%d.Resolution.Cubic",detector),0.0);
+        //fResolution[8040][detector].push_back(TF1(Form("Descant.White.%d.Resolution",detector),
+        //                                          Form("(TMath::Sqrt((%f+%f*x+%f*x*x+%f*x*x*x)))/(2.*TMath::Sqrt(2.*TMath::Log(2.)))",offset, linear, quadratic, cubic),0.,100000.));
         fThreshold[8040][detector][0] = env.GetValue(Form("Descant.White.%d.Threshold.keV",detector),0.);
         fThresholdWidth[8040][detector][0] = env.GetValue(Form("Descant.White.%d.ThresholdWidth.keV",detector),0.);
         fTimeWindow[8040][detector][0] = env.GetValue(Form("Descant.White.%d.TimeWindow.sec",detector),0.);
@@ -321,6 +324,13 @@ Settings::Settings(std::string fileName, int verbosityLevel)
         fThreshold[8050][detector][0] = env.GetValue(Form("Descant.Yellow.%d.Threshold.keV",detector),0.);
         fThresholdWidth[8050][detector][0] = env.GetValue(Form("Descant.Yellow.%d.ThresholdWidth.keV",detector),0.);
         fTimeWindow[8050][detector][0] = env.GetValue(Form("Descant.Yellow.%d.TimeWindow.sec",detector),0.);
+    }
+    
+    // DESCANT quenching
+    fQuenching.resize(7);
+    for(int isotope = 0; isotope < Settings::kMax; ++isotope) {
+        fQuenching[isotope] = env.GetValue(Form("Descant.Quenching.%d",isotope),1.0);
+        std::cout << "fQuenching[isotope] = " << fQuenching[isotope] << std::endl;
     }
 
     // Paces

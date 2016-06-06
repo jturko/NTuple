@@ -124,6 +124,13 @@ private:
     Double_t fPosy;
     Double_t fPosz;
     Double_t fTime;
+    Double_t fEDepD;
+    Double_t fEDepC;
+    Double_t fEDepP;
+    Double_t fEDepA;
+    Double_t fEDepE;
+    Double_t fEDepN;
+    Double_t fEDepOther;
 
     double fSmearedEnergy;
     bool   fSceptarHit;

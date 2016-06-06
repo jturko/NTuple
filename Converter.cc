@@ -562,6 +562,13 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fChain.SetBranchAddress("posy", &fPosy);
     fChain.SetBranchAddress("posz", &fPosz);
     fChain.SetBranchAddress("time", &fTime);
+    fChain.SetBranchAddress("eDepD", &fEDepD);
+    fChain.SetBranchAddress("eDepC", &fEDepC);
+    fChain.SetBranchAddress("eDepP", &fEDepP);
+    fChain.SetBranchAddress("eDepA", &fEDepA);
+    fChain.SetBranchAddress("eDepE", &fEDepE);
+    fChain.SetBranchAddress("eDepN", &fEDepN);
+    fChain.SetBranchAddress("eDepOther", &fEDepOther);
 
     //create output file
     fOutput = new TFile(outputFileName.c_str(),"recreate");
@@ -1415,6 +1422,9 @@ bool Converter::Run() {
         }
         //create energy-resolution smeared energy
         smearedEnergy = fRandom.Gaus(fDepEnergy,fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy));
+        
+        double deuteronSmearedEnergy = fRandom.Gaus(fEDepD*fSettings->Quenching(Settings::kDeuteron),fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy*fSettings->Quenching(Settings::kDeuteron)));
+        double carbonSmearedEnergy = fRandom.Gaus(fEDepC*fSettings->Quenching(Settings::kCarbon),fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy*fSettings->Quenching(Settings::kCarbon)));
 
         if((fSettings->SortNumberOfEvents()==0)||(fSettings->SortNumberOfEvents()>=fEventNumber) ) {
             //if the hit is above the threshold, we add it to the vector
@@ -1461,7 +1471,9 @@ bool Converter::Run() {
                         fDescantRedDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                         break;
                     case 8040:
-                        fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        //fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepD, deuteronSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC, carbonSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                         break;
                     case 8050:
                         fDescantYellowDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
