@@ -1472,8 +1472,8 @@ bool Converter::Run() {
                         break;
                     case 8040:
                         //fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
-                        fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepD, deuteronSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
-                        fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC, carbonSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        //fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepD, deuteronSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD , carbonSmearedEnergy+deuteronSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                         break;
                     case 8050:
                         fDescantYellowDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
