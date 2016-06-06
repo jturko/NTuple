@@ -302,8 +302,9 @@ Settings::Settings(std::string fileName, int verbosityLevel)
     }
     for(int detector = 0; detector < 20; ++detector) {
         linear = env.GetValue(Form("Descant.White.%d.Resolution",detector),20.0);
+        std::cout << "descant resolution = " << linear << std::endl;
         fResolution[8040][detector].push_back(TF1(Form("Descant.White.%d.Resolution",detector),
-                                                  Form("%f*TMath::Sqrt(x)", linear),0.,100000.));
+                                                  Form("%f*TMath::Sqrt(x)/(2.*TMath::Sqrt(2.*TMath::Log(2.)))", linear),0.,100000.));
         //offset = env.GetValue(Form("Descant.White.%d.Resolution.Offset",detector),0.0);
         //linear = env.GetValue(Form("Descant.White.%d.Resolution.Linear",detector),0.0);
         //quadratic = env.GetValue(Form("Descant.White.%d.Resolution.Quadratic",detector),0.009);
