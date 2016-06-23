@@ -124,6 +124,12 @@ Settings::Settings(std::string fileName, int verbosityLevel)
     fThresholdWidth[8050].resize(10,std::vector<double>(1));
     fTimeWindow[8050].resize(10,std::vector<double>(1));
 
+    // Testcan
+    fResolution[8500].resize(1);
+    fThreshold[8500].resize(1,std::vector<double>(1));
+    fThresholdWidth[8500].resize(1,std::vector<double>(1));
+    fTimeWindow[8500].resize(1,std::vector<double>(1));
+    
     // Paces
     fResolution[9000].resize(5);
     fThreshold[9000].resize(5,std::vector<double>(1));
@@ -326,6 +332,13 @@ Settings::Settings(std::string fileName, int verbosityLevel)
         fThresholdWidth[8050][detector][0] = env.GetValue(Form("Descant.Yellow.%d.ThresholdWidth.keV",detector),0.);
         fTimeWindow[8050][detector][0] = env.GetValue(Form("Descant.Yellow.%d.TimeWindow.sec",detector),0.);
     }
+        
+    // Testcan
+    linear = env.GetValue("Testcan.Resolution",20.0); std::cout <<"Testcan resolution = " << linear << std::endl;
+    fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("%f*TMath::Sqrt(x)/(2.*TMath::Sqrt(2.*TMath::Log(2.)))", linear),0.,100000.));
+    fThreshold[8500][0][0]      = env.GetValue("Testcan.Threshold.keV",0.);
+    fThresholdWidth[8500][0][0] = env.GetValue("Testcan.ThresholdWidth.keV",0.);
+    fTimeWindow[8500][0][0]     = env.GetValue("Testcan.TimeWindow.sec",0.);
     
     // DESCANT quenching
     fQuenching.resize(7);
@@ -382,5 +395,13 @@ Settings::Settings(std::string fileName, int verbosityLevel)
     fNofBins["0RES_Descant1D"] = env.GetValue("Histogram.1D.Descant.NofBins",4096);
     fRangeLow["0RES_Descant1D"] = env.GetValue("Histogram.1D.Descant.RangeLow.keV",0.5);
     fRangeHigh["0RES_Descant1D"] = env.GetValue("Histogram.1D.Descant.RangeHigh.keV",4096.5);
+    
+    fNofBins["Testcan1D"] = env.GetValue("Histogram.1D.Testcan.NofBins",4096);
+    fRangeLow["Testcan1D"] = env.GetValue("Histogram.1D.Testcan.RangeLow.keV",0.5);
+    fRangeHigh["Testcan1D"] = env.GetValue("Histogram.1D.Testcan.RangeHigh.keV",4096.5);
+
+    fNofBins["0RES_Testcan1D"] = env.GetValue("Histogram.1D.Testcan.NofBins",4096);
+    fRangeLow["0RES_Testcan1D"] = env.GetValue("Histogram.1D.Testcan.RangeLow.keV",0.5);
+    fRangeHigh["0RES_Testcan1D"] = env.GetValue("Histogram.1D.Testcan.RangeHigh.keV",4096.5);
 
 }

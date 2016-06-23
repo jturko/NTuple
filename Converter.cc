@@ -640,6 +640,10 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fTree.Branch("DescantWhiteDetector",&fDescantWhiteDetector, fSettings->BufferSize());
     fTree.Branch("DescantYellowDetector",&fDescantYellowDetector, fSettings->BufferSize());
 
+    // Testcan
+    fTestcanDetector         = new std::vector<Detector>;
+    fTree.Branch("TestcanDetector", &fTestcanDetector, fSettings->BufferSize());
+
     // PACES
     fPacesArray         = new std::vector<Detector>;
     fPacesDetector      = new std::vector<Detector>;
@@ -682,6 +686,8 @@ bool Converter::Run() {
     int descantRedHits;
     int descantWhiteHits;
     int descantYellowHits;
+
+    int testcanHits;   
 
 //    double buffer1 = 0;
 //    double buffer2 = 0;
@@ -741,6 +747,9 @@ bool Converter::Run() {
             descantYellowHits = fDescantYellowDetector->size();
             descantArrayHits = descantBlueHits + descantGreenHits + descantRedHits + descantWhiteHits + descantYellowHits;
 
+            // number of Testcan hits
+            testcanHits = fTestcanDetector->size();
+
             //---------------------------------------------------------------------
             // Unsuppressed GRIFFIN
             //---------------------------------------------------------------------
@@ -798,6 +807,11 @@ bool Converter::Run() {
             hist1D = Get1DHistogram("DescantYellowHitPattern","Statistics");
             for(size_t firstDet = 0; firstDet < fDescantYellowDetector->size(); ++firstDet) {
                 hist1D->Fill((fDescantYellowDetector->at(firstDet).DetectorId()));
+            }
+            hist1D = Get1DHistogram("TestcanMultiplicity","Statistics");
+            hist1D->Fill(fTestcanDetector->size());
+            for(size_t firstDet = 0; firstDet < fTestcanDetector->size(); ++firstDet) {
+                hist1D->Fill((fTestcanDetector->at(firstDet).DetectorId()));
             }
 
             // GRIFFIN Crystal
@@ -1363,6 +1377,9 @@ bool Converter::Run() {
             FillHistDetector1DGamma(hist1D, fDescantArray, "descant_array_scin_unsup_edep_sum", "Descant1D");
             FillHistDetector1DGammaNR(hist1D, fDescantArray, "descant_array_scin_unsup_edep_sum_nr", "0RES_Descant1D");
 
+            // Testcan
+            FillHistDetector1DGamma(hist1D, fTestcanDetector, "testcan_scin_unsup_edep", "Testcan1D");
+            FillHistDetector1DGammaNR(hist1D, fTestcanDetector, "testcan_scin_unsup_edep_nr", "0RES_Testcan1D");
 
             // Paces
             FillHistDetector1DGamma(hist1D, fPacesDetector, "paces_crystal_unsup_edep", "Paces1D");
@@ -1402,6 +1419,8 @@ bool Converter::Run() {
             fDescantRedDetector->clear();
             fDescantWhiteDetector->clear();
             fDescantYellowDetector->clear();
+
+            fTestcanDetector->clear();
 
             fPacesDetector->clear();
             fPacesArray->clear();
@@ -1478,6 +1497,11 @@ bool Converter::Run() {
                     case 8050:
                         fDescantYellowDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                         break;
+
+                    case 8500:
+                        fTestcanDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD, carbonSmearedEnergy+deuteronSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                    break;
+
                     case 9000:
                         fPacesDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                         break;
