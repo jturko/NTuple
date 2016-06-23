@@ -302,7 +302,7 @@ Settings::Settings(std::string fileName, int verbosityLevel)
     }
     for(int detector = 0; detector < 20; ++detector) {
         linear = env.GetValue(Form("Descant.White.%d.Resolution",detector),20.0);
-        std::cout << "descant resolution = " << linear << std::endl;
+        if(detector == 0) std::cout << "descant resolution = " << linear << std::endl;
         fResolution[8040][detector].push_back(TF1(Form("Descant.White.%d.Resolution",detector),
                                                   Form("%f*TMath::Sqrt(x)/(2.*TMath::Sqrt(2.*TMath::Log(2.)))", linear),0.,100000.));
         //offset = env.GetValue(Form("Descant.White.%d.Resolution.Offset",detector),0.0);
@@ -331,7 +331,7 @@ Settings::Settings(std::string fileName, int verbosityLevel)
     fQuenching.resize(7);
     for(int isotope = 0; isotope < Settings::kMax; ++isotope) {
         fQuenching[isotope] = env.GetValue(Form("Descant.Quenching.%d",isotope),1.0);
-        std::cout << "fQuenching[isotope] = " << fQuenching[isotope] << std::endl;
+        std::cout << "fQuenching[" << isotope << "] = " << fQuenching[isotope] << std::endl;
     }
 
     // Paces

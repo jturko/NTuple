@@ -171,6 +171,9 @@ private:
     std::vector<Detector>* fDescantWhiteDetector;
     std::vector<Detector>* fDescantYellowDetector;
 
+    // Testcan
+    std::vector<Detector>* fTestcanDetector;
+
     // Paces
     std::vector<Detector>* fPacesArray;
     std::vector<Detector>* fPacesDetector;
