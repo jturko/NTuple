@@ -6,6 +6,7 @@
 #include "TMath.h"
 
 #include "Utilities.hh"
+#include "LightYield.hh"
 
 Converter::Converter(std::vector<std::string>& inputFileNames, const std::string& outputFileName, Settings* settings)
     : fSettings(settings) {
@@ -1442,8 +1443,29 @@ bool Converter::Run() {
         //create energy-resolution smeared energy
         smearedEnergy = fRandom.Gaus(fDepEnergy,fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy));
         
-        double deuteronSmearedEnergy = fRandom.Gaus(fEDepD*fSettings->Quenching(Settings::kDeuteron),fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy*fSettings->Quenching(Settings::kDeuteron)));
-        double carbonSmearedEnergy = fRandom.Gaus(fEDepC*fSettings->Quenching(Settings::kCarbon),fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy*fSettings->Quenching(Settings::kCarbon)));
+        // Light yield functions
+        double a1 = 0.83;
+        double a2 = 2.82;
+        double a3 = 0.25;
+        double a4 = 0.93;
+        //double deuteronSmearedEnergy = fRandom.Gaus(fEDepD*fSettings->Quenching(Settings::kDeuteron),fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy*fSettings->Quenching(Settings::kDeuteron)));
+        //double carbonSmearedEnergy = fRandom.Gaus(fEDepC*fSettings->Quenching(Settings::kCarbon),fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy*fSettings->Quenching(Settings::kCarbon)));
+        
+        //if(fEDepD > 10.) deuteronSmearedEnergy = 1000*fRandom.Gaus( a1*fEDepD/1000. - a2*(1.-TMath::Exp(-a3*pow(fEDepD/1000.,a4))) , fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fEDepD/1000.) );
+        double deuteronCentroid = deuteronLight(fEDepD/1000.); // takes depEnergy in MeV
+        double deuteronSmearedEnergy = 0;
+        if(fEDepD > 10.) deuteronSmearedEnergy = 1000*fRandom.Gaus(deuteronCentroid,resolutionSigma(deuteronCentroid)); // returns light yield in keVee
+        double carbonCentroid = carbonLight(fEDepC/1000.);
+        double carbonSmearedEnergy = 0.;
+        if(fEDepC > 1.) carbonSmearedEnergy = 1000*fRandom.Gaus(carbonCentroid,resolutionSigma(carbonCentroid));
+
+        //double deuteronSmearedEnergy = fEDepD;
+        //double carbonSmearedEnergy = 0.14*0.1*fRandom.Gaus( a1*fEDepC - a2*(1.-TMath::Exp(-a3*pow(fEDepC,a4))) , fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy) );
+        //double protonSmearedEnergy = 1000*fRandom.Gaus( a1*fEDepP/1000. - a2*(1.-TMath::Exp(-a3*pow(fEDepP/1000.,a4))) , fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fEDepP/1000.) );
+        double protonCentroid = protonLight(fEDepP/1000.);
+        double protonSmearedEnergy = 0.;
+        if(fEDepP > 10.) protonSmearedEnergy = 1000*fRandom.Gaus(protonCentroid,resolutionSigma(protonCentroid));
+        
 
         if((fSettings->SortNumberOfEvents()==0)||(fSettings->SortNumberOfEvents()>=fEventNumber) ) {
             //if the hit is above the threshold, we add it to the vector
@@ -1499,7 +1521,7 @@ bool Converter::Run() {
                         break;
 
                     case 8500:
-                        fTestcanDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD, carbonSmearedEnergy+deuteronSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        fTestcanDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD+fEDepP, carbonSmearedEnergy+deuteronSmearedEnergy+protonSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                     break;
 
                     case 9000:

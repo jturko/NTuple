@@ -137,7 +137,9 @@ Settings::Settings(std::string fileName, int verbosityLevel)
     fTimeWindow[9000].resize(5,std::vector<double>(1));
 
     double offset, linear, quadratic, cubic;
-
+    double A, B, C;
+    //A=0.0826;B=0.2673;C=0.0548; 
+    A=0.15;B=0.1;C=0.02; 
     // Griffin
     for(int detector = 0; detector < 16; ++detector) {
         for(int crystal = 0; crystal < 4; ++crystal) {
@@ -333,9 +335,12 @@ Settings::Settings(std::string fileName, int verbosityLevel)
         fTimeWindow[8050][detector][0] = env.GetValue(Form("Descant.Yellow.%d.TimeWindow.sec",detector),0.);
     }
         
-    // Testcan
-    linear = env.GetValue("Testcan.Resolution",20.0); std::cout <<"Testcan resolution = " << linear << std::endl;
-    fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("%f*TMath::Sqrt(x)/(2.*TMath::Sqrt(2.*TMath::Log(2.)))", linear),0.,100000.));
+    // Testcan light
+    linear = env.GetValue("Testcan.Resolution",20.0); //std::cout <<"Testcan resolution = " << linear << std::endl;
+    //fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("%f*TMath::Sqrt(x)/(2.*TMath::Sqrt(2.*TMath::Log(2.)))", linear),0.,100000.));
+    //fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("x*TMath::Sqrt(TMath::Power(%f,2)+TMath::Power(%f,2)/x+TMath::Power(%f/x,2))/2.*TMath::Sqrt(2.*TMath::Log(2.)",A,B,C,0.)0.,100000.));
+    fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("x*TMath::Sqrt(TMath::Power(%f,2)+TMath::Power(%f,2)/x+TMath::Power(%f/x,2))",A,B,C),0.,20.)); // From N Desplan Thesis
+    //fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("x*TMath::Sqrt(TMath::Power(%f,2)+TMath::Power(%f,2)/x+TMath::Power(%f/x,2))/(2.*TMath::Sqrt(2.*TMath::Log(2.)))",A,B,C),0.,20.)); // From N Desplan Thesis
     fThreshold[8500][0][0]      = env.GetValue("Testcan.Threshold.keV",0.);
     fThresholdWidth[8500][0][0] = env.GetValue("Testcan.ThresholdWidth.keV",0.);
     fTimeWindow[8500][0][0]     = env.GetValue("Testcan.TimeWindow.sec",0.);
@@ -344,7 +349,7 @@ Settings::Settings(std::string fileName, int verbosityLevel)
     fQuenching.resize(7);
     for(int isotope = 0; isotope < Settings::kMax; ++isotope) {
         fQuenching[isotope] = env.GetValue(Form("Descant.Quenching.%d",isotope),1.0);
-        std::cout << "fQuenching[" << isotope << "] = " << fQuenching[isotope] << std::endl;
+        //std::cout << "fQuenching[" << isotope << "] = " << fQuenching[isotope] << std::endl;
     }
 
     // Paces
