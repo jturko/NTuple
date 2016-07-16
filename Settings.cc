@@ -130,6 +130,13 @@ Settings::Settings(std::string fileName, int verbosityLevel)
     fThresholdWidth[8500].resize(1,std::vector<double>(1));
     fTimeWindow[8500].resize(1,std::vector<double>(1));
     
+    fProtonCoeff.resize(4);
+    fDeuteronCoeff.resize(4);
+    fCarbonCoeff.resize(4);
+    fBeCoeff.resize(4);
+    fBCoeff.resize(4);
+    fAlphaCoeff.resize(4);
+
     // Paces
     fResolution[9000].resize(5);
     fThreshold[9000].resize(5,std::vector<double>(1));
@@ -139,7 +146,7 @@ Settings::Settings(std::string fileName, int verbosityLevel)
     double offset, linear, quadratic, cubic;
     double A, B, C;
     //A=0.0826;B=0.2673;C=0.0548; 
-    A=0.15;B=0.1;C=0.02; 
+    //A=0.15;B=0.1;C=0.02; 
     // Griffin
     for(int detector = 0; detector < 16; ++detector) {
         for(int crystal = 0; crystal < 4; ++crystal) {
@@ -337,6 +344,18 @@ Settings::Settings(std::string fileName, int verbosityLevel)
         
     // Testcan light
     linear = env.GetValue("Testcan.Resolution",20.0); //std::cout <<"Testcan resolution = " << linear << std::endl;
+    A = env.GetValue("Testcan.Resolution.A",0.15);     
+    B = env.GetValue("Testcan.Resolution.B",0.10);     
+    C = env.GetValue("Testcan.Resolution.C",0.02); 
+    std::cout << "A = " << A << " B = " << B << " C = " << C << std::endl;
+    for(int i = 1; i <= 4; i++) {
+        fProtonCoeff[i-1] = env.GetValue(Form("Testcan.Proton.%d",i), 0.0); //std::cout<<fProtonCoeff[i-1]<<std::endl;
+        fDeuteronCoeff[i-1] = env.GetValue(Form("Testcan.Deuteron.%d",i), 0.0);
+        fCarbonCoeff[i-1] = env.GetValue(Form("Testcan.Carbon.%d",i), 0.0);
+        fBeCoeff[i-1] = env.GetValue(Form("Testcan.Be.%d",i), 0.0);
+        fBCoeff[i-1] = env.GetValue(Form("Testcan.B.%d",i), 0.0);
+        fAlphaCoeff[i-1] = env.GetValue(Form("Testcan.Alpha.%d",i), 0.0);
+    }    
     //fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("%f*TMath::Sqrt(x)/(2.*TMath::Sqrt(2.*TMath::Log(2.)))", linear),0.,100000.));
     //fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("x*TMath::Sqrt(TMath::Power(%f,2)+TMath::Power(%f,2)/x+TMath::Power(%f/x,2))/2.*TMath::Sqrt(2.*TMath::Log(2.)",A,B,C,0.)0.,100000.));
     fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("x*TMath::Sqrt(TMath::Power(%f,2)+TMath::Power(%f,2)/x+TMath::Power(%f/x,2))",A,B,C),0.,20.)); // From N Desplan Thesis
@@ -351,6 +370,7 @@ Settings::Settings(std::string fileName, int verbosityLevel)
         fQuenching[isotope] = env.GetValue(Form("Descant.Quenching.%d",isotope),1.0);
         //std::cout << "fQuenching[" << isotope << "] = " << fQuenching[isotope] << std::endl;
     }
+
 
     // Paces
     for(int detector = 0; detector < 5; ++detector) {

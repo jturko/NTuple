@@ -113,7 +113,20 @@ public:
         if(scintIon < 0 || scintIon >= kMax) { std::cout << "error : scintIon outside of the enum range!" << std::endl; return -1.; }
         else return fQuenching[scintIon];
     }
+    
+    //double ProtonCoeff(int i) { return fProtonCoeff[i]; }
+    //double DeuteronCoeff(int i) { return fDeuteronCoeff[i]; }
+    //double CarbonCoeff(int i) { return fCarbonCoeff[i]; }
+    //double BeCoeff(int i) { return fBeCoeff[i]; }
+    //double BCoeff(int i) { return fBCoeff[i]; }
+    //double AlphaCoeff(int i) { return fAlphaCoeff[i]; }
 
+    std::vector<double> & ProtonCoeff() { return fProtonCoeff; }
+    std::vector<double> & DeuteronCoeff() { return fDeuteronCoeff; }
+    std::vector<double> & CarbonCoeff() { return fCarbonCoeff; }
+    std::vector<double> & BeCoeff() { return fBeCoeff; }
+    std::vector<double> & BCoeff() { return fBCoeff; }
+    std::vector<double> & AlphaCoeff() { return fAlphaCoeff; }
 
 private:
     std::string fNtupleName;
@@ -143,6 +156,14 @@ private:
     std::map<std::string,double> fRangeHigh;
     
     std::vector<double> fQuenching;
+
+    std::vector<double> fProtonCoeff;
+    std::vector<double> fDeuteronCoeff;
+    std::vector<double> fCarbonCoeff;
+    std::vector<double> fBeCoeff;
+    std::vector<double> fBCoeff;
+    std::vector<double> fAlphaCoeff;
+    
 };
 
 #endif

@@ -131,6 +131,12 @@ private:
     Double_t fEDepE;
     Double_t fEDepN;
     Double_t fEDepOther;
+    Double_t fEDepBe;
+    Double_t fEDepB;
+
+    double fLightOutput(double E, std::vector<double> & coeff) {
+        return coeff[0]*E-coeff[1]*(1.-TMath::Exp(-1.0*coeff[2]*TMath::Power(E,coeff[3])));
+    }
 
     double fSmearedEnergy;
     bool   fSceptarHit;

@@ -570,6 +570,8 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fChain.SetBranchAddress("eDepE", &fEDepE);
     fChain.SetBranchAddress("eDepN", &fEDepN);
     fChain.SetBranchAddress("eDepOther", &fEDepOther);
+    fChain.SetBranchAddress("eDepBe", &fEDepBe);
+    fChain.SetBranchAddress("eDepB", &fEDepB);
 
     //create output file
     fOutput = new TFile(outputFileName.c_str(),"recreate");
@@ -1444,28 +1446,51 @@ bool Converter::Run() {
         smearedEnergy = fRandom.Gaus(fDepEnergy,fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy));
         
         // Light yield functions
-        double a1 = 0.83;
-        double a2 = 2.82;
-        double a3 = 0.25;
-        double a4 = 0.93;
-        //double deuteronSmearedEnergy = fRandom.Gaus(fEDepD*fSettings->Quenching(Settings::kDeuteron),fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy*fSettings->Quenching(Settings::kDeuteron)));
-        //double carbonSmearedEnergy = fRandom.Gaus(fEDepC*fSettings->Quenching(Settings::kCarbon),fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy*fSettings->Quenching(Settings::kCarbon)));
+        //double deuteronCentroid = deuteronLight(fEDepD/1000.); // takes depEnergy in MeV
+        //double deuteronSmearedEnergy = 0.;
+        //if(fEDepD > 10.) deuteronSmearedEnergy = 1000.*fRandom.Gaus(deuteronCentroid,resolutionSigma(deuteronCentroid)); // returns light yield in keVee
         
-        //if(fEDepD > 10.) deuteronSmearedEnergy = 1000*fRandom.Gaus( a1*fEDepD/1000. - a2*(1.-TMath::Exp(-a3*pow(fEDepD/1000.,a4))) , fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fEDepD/1000.) );
-        double deuteronCentroid = deuteronLight(fEDepD/1000.); // takes depEnergy in MeV
-        double deuteronSmearedEnergy = 0;
-        if(fEDepD > 10.) deuteronSmearedEnergy = 1000*fRandom.Gaus(deuteronCentroid,resolutionSigma(deuteronCentroid)); // returns light yield in keVee
-        double carbonCentroid = carbonLight(fEDepC/1000.);
-        double carbonSmearedEnergy = 0.;
-        if(fEDepC > 1.) carbonSmearedEnergy = 1000*fRandom.Gaus(carbonCentroid,resolutionSigma(carbonCentroid));
+        //double carbonCentroid = carbonLight(fEDepC/1000.);
+        //double carbonSmearedEnergy = 0.;
+        //if(fEDepC > 1.) carbonSmearedEnergy = 1000.*fRandom.Gaus(carbonCentroid,resolutionSigma(carbonCentroid));
 
-        //double deuteronSmearedEnergy = fEDepD;
-        //double carbonSmearedEnergy = 0.14*0.1*fRandom.Gaus( a1*fEDepC - a2*(1.-TMath::Exp(-a3*pow(fEDepC,a4))) , fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy) );
-        //double protonSmearedEnergy = 1000*fRandom.Gaus( a1*fEDepP/1000. - a2*(1.-TMath::Exp(-a3*pow(fEDepP/1000.,a4))) , fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fEDepP/1000.) );
-        double protonCentroid = protonLight(fEDepP/1000.);
-        double protonSmearedEnergy = 0.;
-        if(fEDepP > 10.) protonSmearedEnergy = 1000*fRandom.Gaus(protonCentroid,resolutionSigma(protonCentroid));
+        //double protonCentroid = protonLight(fEDepP/1000.);
+        //double protonSmearedEnergy = 0.;
+        //if(fEDepP > 10.) protonSmearedEnergy = 1000.*fRandom.Gaus(protonCentroid,resolutionSigma(protonCentroid));
         
+        //double alphaCentroid = alphaLight(fEDepA/1000.);
+        //double alphaSmearedEnergy = 0.;
+        //if(fEDepA > 1.) alphaSmearedEnergy = 1000.*fRandom.Gaus(alphaCentroid,resolutionSigma(alphaCentroid));
+        
+        //double BeCentroid = BeLight(fEDepBe/1000.);
+        //double BeSmearedEnergy = 0.;
+        //if(fEDepBe > 1.) BeSmearedEnergy = 1000.*fRandom.Gaus(BeCentroid,resolutionSigma(BeCentroid));
+
+        //double BCentroid = BLight(fEDepB/1000.);
+        //double BSmearedEnergy = 0.;
+        //if(fEDepB > 1.) BSmearedEnergy = 1000.*fRandom.Gaus(BCentroid,resolutionSigma(BCentroid));
+        
+        //double eCentroid = eLight(fEDepE/1000.);
+        //double eSmearedEnergy = 0.;
+        //if(fEDepE > 1.) eSmearedEnergy = 1000.*fRandom.Gaus(eCentroid,resolutionSigma(eCentroid));
+        
+        ////////////
+        double light = 0.;
+        double DeuteronCentroid = fLightOutput(fEDepD/1000., fSettings->DeuteronCoeff()); 
+        double ProtonCentroid = fLightOutput(fEDepP/1000., fSettings->ProtonCoeff()); 
+        //std::cout << "ProtonCentroid = " << ProtonCentroid << "   fEDepP = " << fEDepP << std::endl;
+        double CarbonCentroid = fLightOutput(fEDepC/1000., fSettings->CarbonCoeff());
+        double BeCentroid = fLightOutput(fEDepBe/1000., fSettings->BeCoeff());
+        double BCentroid = fLightOutput(fEDepB/1000., fSettings->BCoeff());
+        double AlphaCentroid = fLightOutput(fEDepA/1000., fSettings->AlphaCoeff());
+        if(fEDepD > 1.) light += 1000.*fRandom.Gaus(DeuteronCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,DeuteronCentroid));
+        if(fEDepP > 1.) light += 1000.*fRandom.Gaus(ProtonCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,ProtonCentroid));
+        if(fEDepC > 1.) light += 1000.*fRandom.Gaus(CarbonCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,CarbonCentroid));
+        if(fEDepBe > 1.) light += 1000.*fRandom.Gaus(BeCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,BeCentroid));
+        if(fEDepB > 1.) light += 1000.*fRandom.Gaus(BCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,BCentroid));
+        if(fEDepA > 1.) light += 1000.*fRandom.Gaus(AlphaCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,AlphaCentroid));
+        if(fEDepE > 1.) light += 1000.*fRandom.Gaus(fEDepE, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fEDepE));
+        //std::cout << "light = " << light << std::endl;
 
         if((fSettings->SortNumberOfEvents()==0)||(fSettings->SortNumberOfEvents()>=fEventNumber) ) {
             //if the hit is above the threshold, we add it to the vector
@@ -1514,14 +1539,17 @@ bool Converter::Run() {
                     case 8040:
                         //fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                         //fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepD, deuteronSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
-                        fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD , carbonSmearedEnergy+deuteronSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        //fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD , carbonSmearedEnergy+deuteronSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD , light, TVector3(fPosx,fPosy,fPosz), fTime));
                         break;
                     case 8050:
                         fDescantYellowDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                         break;
 
                     case 8500:
-                        fTestcanDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD+fEDepP, carbonSmearedEnergy+deuteronSmearedEnergy+protonSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        fTestcanDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD+fEDepP+fEDepBe+fEDepB+fEDepE+fEDepA, light, TVector3(fPosx,fPosy,fPosz), fTime));
+                        //fTestcanDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD+fEDepP+fEDepBe+fEDepB+fEDepE+fEDepA, carbonSmearedEnergy+deuteronSmearedEnergy+protonSmearedEnergy+BeSmearedEnergy+BSmearedEnergy+eSmearedEnergy+alphaSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        //fTestcanDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD+fEDepP+fEDepBe+fEDepB+fEDepE+fEDepA, carbonSmearedEnergy+deuteronSmearedEnergy+protonSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                     break;
 
                     case 9000:
