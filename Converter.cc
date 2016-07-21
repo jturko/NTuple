@@ -1463,7 +1463,7 @@ bool Converter::Run() {
         double centroidEres = 0.;        
 
         long unsigned int nScatters = fEdepVector->size();
-        std::cout << "looping through " << nScatters << " scatters" << std::endl;
+        //std::cout << "looping through " << nScatters << " scatters" << std::endl;
         for(long unsigned int j = 0; j < nScatters; ++j) {
             //std::cout << "scatter " << j << " || pType = " << fParticleTypeVector->at(j) << " || eDep = " << fEdepVector->at(j) << std::endl;
             if(fParticleTypeVector->at(j) == 2 || fParticleTypeVector->at(j) == 3) { 
@@ -1477,8 +1477,6 @@ bool Converter::Run() {
             if(fParticleTypeVector->at(j) == 6) { 
                 centroidEkin = LightOutput(fEkinVector->at(j),fSettings->DeuteronCoeff()); 
                 centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->DeuteronCoeff()); 
-                std::cout << "eKin = " << centroidEkin << std::endl;
-                std::cout << "eRes = " << centroidEres << std::endl;
             } 
             if(fParticleTypeVector->at(j) == 7) { 
                 centroidEkin = LightOutput(fEkinVector->at(j),fSettings->CarbonCoeff()); 
@@ -1497,16 +1495,14 @@ bool Converter::Run() {
                 centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->BCoeff()); 
             }
             if(centroidEkin>0){ 
-                std::cout << centroidEkin << centroidEres << std::endl;
                 light += 1000.*fRandom.Gaus(centroidEkin, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEkin));
             }
             if(centroidEres>0){ 
-                std::cout << centroidEkin << centroidEres << std::endl;
                 light -= 1000.*fRandom.Gaus(centroidEres, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEres));
             }    
         }
     
-        std::cout << "light of evt " << i << " = " << light << std::endl;
+        //std::cout << "light of evt " << i << " = " << light << std::endl;
 
         //double DeuteronCentroid = LightOutput(fEDepD/1000., fSettings->DeuteronCoeff()); 
         //double ProtonCentroid = LightOutput(fEDepP/1000., fSettings->ProtonCoeff()); 
