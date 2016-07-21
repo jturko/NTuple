@@ -134,9 +134,9 @@ private:
     Double_t fEDepBe;
     Double_t fEDepB;
 
-    std::vector<Double_t> * fEkinVector;
-    std::vector<Double_t> * fEdepVector;
-    std::vector<Int_t> * fParticleTypeVector;
+    std::vector<Double_t>* fEkinVector;
+    std::vector<Double_t>* fEdepVector;
+    std::vector<Int_t>* fParticleTypeVector;
     TBranch * fEkinBranch;
     TBranch * fEdepBranch;
     TBranch * fParticleTypeBranch;

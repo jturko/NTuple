@@ -548,6 +548,9 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
 
     fSceptarHit = false;
 
+    fEkinVector = NULL;
+    fEdepVector = NULL;
+    fParticleTypeVector = NULL;
     //add branches to input chain
     fChain.SetBranchAddress("eventNumber", &fEventNumber);
     fChain.SetBranchAddress("trackID", &fTrackID);
@@ -572,9 +575,12 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fChain.SetBranchAddress("eDepOther", &fEDepOther);
     fChain.SetBranchAddress("eDepBe", &fEDepBe);
     fChain.SetBranchAddress("eDepB", &fEDepB);
-    fChain.SetBranchAddress("eKinVector",&fEkinVector,&fEkinBranch);
-    fChain.SetBranchAddress("eDepVector",&fEdepVector,&fEdepBranch);
-    fChain.SetBranchAddress("particleTypeVector",&fParticleTypeVector,&fParticleTypeBranch);
+    //fChain.SetBranchAddress("eKinVector",fEkinVector,&fEkinBranch);
+    //fChain.SetBranchAddress("eDepVector",fEdepVector,&fEdepBranch);
+    //fChain.SetBranchAddress("particleTypeVector",fParticleTypeVector,&fParticleTypeBranch);
+    fChain.SetBranchAddress("eKinVector",&fEkinVector);
+    fChain.SetBranchAddress("eDepVector",&fEdepVector);
+    fChain.SetBranchAddress("particleTypeVector",&fParticleTypeVector);
 
     //create output file
     fOutput = new TFile(outputFileName.c_str(),"recreate");
@@ -716,6 +722,9 @@ bool Converter::Run() {
 
     for(int i = 0; i < nEntries; ++i) {
         status = fChain.GetEntry(i);
+        //fEkinBranch->GetEntry(i);
+        //fEdepBranch->GetEntry(i);
+        //fParticleTypeBranch->GetEntry(i);
         if(status == -1) {
             std::cerr<<"Error occured, couldn't read entry "<<i<<" from tree "<<fChain.GetName()<<" in file "<<fChain.GetFile()->GetName()<<std::endl;
             continue;
@@ -1450,11 +1459,13 @@ bool Converter::Run() {
         
         // light yield functions
         double light = 0.;
-        double centroidEkin = 0;        
-        double centroidEres = 0;        
+        double centroidEkin = 0.;        
+        double centroidEres = 0.;        
 
-        int nScatters = fEdepVector->size();
-        for(int j = 0; j < nScatters; ++j) {
+        long unsigned int nScatters = fEdepVector->size();
+        std::cout << "looping through " << nScatters << " scatters" << std::endl;
+        for(long unsigned int j = 0; j < nScatters; ++j) {
+            //std::cout << "scatter " << j << " || pType = " << fParticleTypeVector->at(j) << " || eDep = " << fEdepVector->at(j) << std::endl;
             if(fParticleTypeVector->at(j) == 2 || fParticleTypeVector->at(j) == 3) { 
                 centroidEkin = fEkinVector->at(j);  
                 centroidEres = fEdepVector->at(j);
@@ -1466,6 +1477,8 @@ bool Converter::Run() {
             if(fParticleTypeVector->at(j) == 6) { 
                 centroidEkin = LightOutput(fEkinVector->at(j),fSettings->DeuteronCoeff()); 
                 centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->DeuteronCoeff()); 
+                std::cout << "eKin = " << centroidEkin << std::endl;
+                std::cout << "eRes = " << centroidEres << std::endl;
             } 
             if(fParticleTypeVector->at(j) == 7) { 
                 centroidEkin = LightOutput(fEkinVector->at(j),fSettings->CarbonCoeff()); 
@@ -1483,14 +1496,17 @@ bool Converter::Run() {
                 centroidEkin = LightOutput(fEkinVector->at(j),fSettings->BCoeff()); 
                 centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->BCoeff()); 
             }
-            if(centroidEkin>0&&centroidEres>0){ 
-                //std::cout << centroidEkin << centroidEres << std::endl;
+            if(centroidEkin>0){ 
+                std::cout << centroidEkin << centroidEres << std::endl;
                 light += 1000.*fRandom.Gaus(centroidEkin, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEkin));
-                light -= 1000.*fRandom.Gaus(centroidEkin, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEres));
+            }
+            if(centroidEres>0){ 
+                std::cout << centroidEkin << centroidEres << std::endl;
+                light -= 1000.*fRandom.Gaus(centroidEres, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEres));
             }    
         }
     
-        //std::cout << "light of evt " << i << " = " << light << std::endl;
+        std::cout << "light of evt " << i << " = " << light << std::endl;
 
         //double DeuteronCentroid = LightOutput(fEDepD/1000., fSettings->DeuteronCoeff()); 
         //double ProtonCentroid = LightOutput(fEDepP/1000., fSettings->ProtonCoeff()); 
