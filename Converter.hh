@@ -134,7 +134,14 @@ private:
     Double_t fEDepBe;
     Double_t fEDepB;
 
-    double fLightOutput(double E, std::vector<double> & coeff) {
+    std::vector<Double_t> * fEkinVector;
+    std::vector<Double_t> * fEdepVector;
+    std::vector<Int_t> * fParticleTypeVector;
+    TBranch * fEkinBranch;
+    TBranch * fEdepBranch;
+    TBranch * fParticleTypeBranch;
+
+    double LightOutput(double E, std::vector<double> & coeff) {
         return coeff[0]*E-coeff[1]*(1.-TMath::Exp(-1.0*coeff[2]*TMath::Power(E,coeff[3])));
     }
 

@@ -572,6 +572,9 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fChain.SetBranchAddress("eDepOther", &fEDepOther);
     fChain.SetBranchAddress("eDepBe", &fEDepBe);
     fChain.SetBranchAddress("eDepB", &fEDepB);
+    fChain.SetBranchAddress("eKinVector",&fEkinVector,&fEkinBranch);
+    fChain.SetBranchAddress("eDepVector",&fEdepVector,&fEdepBranch);
+    fChain.SetBranchAddress("particleTypeVector",&fParticleTypeVector,&fParticleTypeBranch);
 
     //create output file
     fOutput = new TFile(outputFileName.c_str(),"recreate");
@@ -1445,51 +1448,63 @@ bool Converter::Run() {
         //create energy-resolution smeared energy
         smearedEnergy = fRandom.Gaus(fDepEnergy,fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy));
         
-        // Light yield functions
-        //double deuteronCentroid = deuteronLight(fEDepD/1000.); // takes depEnergy in MeV
-        //double deuteronSmearedEnergy = 0.;
-        //if(fEDepD > 10.) deuteronSmearedEnergy = 1000.*fRandom.Gaus(deuteronCentroid,resolutionSigma(deuteronCentroid)); // returns light yield in keVee
-        
-        //double carbonCentroid = carbonLight(fEDepC/1000.);
-        //double carbonSmearedEnergy = 0.;
-        //if(fEDepC > 1.) carbonSmearedEnergy = 1000.*fRandom.Gaus(carbonCentroid,resolutionSigma(carbonCentroid));
-
-        //double protonCentroid = protonLight(fEDepP/1000.);
-        //double protonSmearedEnergy = 0.;
-        //if(fEDepP > 10.) protonSmearedEnergy = 1000.*fRandom.Gaus(protonCentroid,resolutionSigma(protonCentroid));
-        
-        //double alphaCentroid = alphaLight(fEDepA/1000.);
-        //double alphaSmearedEnergy = 0.;
-        //if(fEDepA > 1.) alphaSmearedEnergy = 1000.*fRandom.Gaus(alphaCentroid,resolutionSigma(alphaCentroid));
-        
-        //double BeCentroid = BeLight(fEDepBe/1000.);
-        //double BeSmearedEnergy = 0.;
-        //if(fEDepBe > 1.) BeSmearedEnergy = 1000.*fRandom.Gaus(BeCentroid,resolutionSigma(BeCentroid));
-
-        //double BCentroid = BLight(fEDepB/1000.);
-        //double BSmearedEnergy = 0.;
-        //if(fEDepB > 1.) BSmearedEnergy = 1000.*fRandom.Gaus(BCentroid,resolutionSigma(BCentroid));
-        
-        //double eCentroid = eLight(fEDepE/1000.);
-        //double eSmearedEnergy = 0.;
-        //if(fEDepE > 1.) eSmearedEnergy = 1000.*fRandom.Gaus(eCentroid,resolutionSigma(eCentroid));
-        
-        ////////////
+        // light yield functions
         double light = 0.;
-        double DeuteronCentroid = fLightOutput(fEDepD/1000., fSettings->DeuteronCoeff()); 
-        double ProtonCentroid = fLightOutput(fEDepP/1000., fSettings->ProtonCoeff()); 
-        //std::cout << "ProtonCentroid = " << ProtonCentroid << "   fEDepP = " << fEDepP << std::endl;
-        double CarbonCentroid = fLightOutput(fEDepC/1000., fSettings->CarbonCoeff());
-        double BeCentroid = fLightOutput(fEDepBe/1000., fSettings->BeCoeff());
-        double BCentroid = fLightOutput(fEDepB/1000., fSettings->BCoeff());
-        double AlphaCentroid = fLightOutput(fEDepA/1000., fSettings->AlphaCoeff());
-        if(fEDepD > 1.) light += 1000.*fRandom.Gaus(DeuteronCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,DeuteronCentroid));
-        if(fEDepP > 1.) light += 1000.*fRandom.Gaus(ProtonCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,ProtonCentroid));
-        if(fEDepC > 1.) light += 1000.*fRandom.Gaus(CarbonCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,CarbonCentroid));
-        if(fEDepBe > 1.) light += 1000.*fRandom.Gaus(BeCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,BeCentroid));
-        if(fEDepB > 1.) light += 1000.*fRandom.Gaus(BCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,BCentroid));
-        if(fEDepA > 1.) light += 1000.*fRandom.Gaus(AlphaCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,AlphaCentroid));
-        if(fEDepE > 1.) light += 1000.*fRandom.Gaus(fEDepE, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fEDepE));
+        double centroidEkin = 0;        
+        double centroidEres = 0;        
+
+        int nScatters = fEdepVector->size();
+        for(int j = 0; j < nScatters; ++j) {
+            if(fParticleTypeVector->at(j) == 2 || fParticleTypeVector->at(j) == 3) { 
+                centroidEkin = fEkinVector->at(j);  
+                centroidEres = fEdepVector->at(j);
+            } 
+            if(fParticleTypeVector->at(j) == 4) { 
+                centroidEkin = LightOutput(fEkinVector->at(j),fSettings->ProtonCoeff()); 
+                centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->ProtonCoeff()); 
+            } 
+            if(fParticleTypeVector->at(j) == 6) { 
+                centroidEkin = LightOutput(fEkinVector->at(j),fSettings->DeuteronCoeff()); 
+                centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->DeuteronCoeff()); 
+            } 
+            if(fParticleTypeVector->at(j) == 7) { 
+                centroidEkin = LightOutput(fEkinVector->at(j),fSettings->CarbonCoeff()); 
+                centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->CarbonCoeff()); 
+            } 
+            if(fParticleTypeVector->at(j) == 8) { 
+                centroidEkin = LightOutput(fEkinVector->at(j),fSettings->AlphaCoeff()); 
+                centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->AlphaCoeff()); 
+            } 
+            if(fParticleTypeVector->at(j) == 9) { 
+                centroidEkin = LightOutput(fEkinVector->at(j),fSettings->BeCoeff()); 
+                centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->BeCoeff()); 
+            } 
+            if(fParticleTypeVector->at(j) == 10) { 
+                centroidEkin = LightOutput(fEkinVector->at(j),fSettings->BCoeff()); 
+                centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->BCoeff()); 
+            }
+            if(centroidEkin>0&&centroidEres>0){ 
+                //std::cout << centroidEkin << centroidEres << std::endl;
+                light += 1000.*fRandom.Gaus(centroidEkin, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEkin));
+                light -= 1000.*fRandom.Gaus(centroidEkin, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEres));
+            }    
+        }
+    
+        //std::cout << "light of evt " << i << " = " << light << std::endl;
+
+        //double DeuteronCentroid = LightOutput(fEDepD/1000., fSettings->DeuteronCoeff()); 
+        //double ProtonCentroid = LightOutput(fEDepP/1000., fSettings->ProtonCoeff()); 
+        //double CarbonCentroid = LightOutput(fEDepC/1000., fSettings->CarbonCoeff());
+        //double BeCentroid = LightOutput(fEDepBe/1000., fSettings->BeCoeff());
+        //double BCentroid = LightOutput(fEDepB/1000., fSettings->BCoeff());
+        //double AlphaCentroid = LightOutput(fEDepA/1000., fSettings->AlphaCoeff());
+        //if(fEDepD > 1.) light += 1000.*fRandom.Gaus(DeuteronCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,DeuteronCentroid));
+        //if(fEDepP > 1.) light += 1000.*fRandom.Gaus(ProtonCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,ProtonCentroid));
+        //if(fEDepC > 1.) light += 1000.*fRandom.Gaus(CarbonCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,CarbonCentroid));
+        //if(fEDepBe > 1.) light += 1000.*fRandom.Gaus(BeCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,BeCentroid));
+        //if(fEDepB > 1.) light += 1000.*fRandom.Gaus(BCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,BCentroid));
+        //if(fEDepA > 1.) light += 1000.*fRandom.Gaus(AlphaCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,AlphaCentroid));
+        //if(fEDepE > 1.) light += 1000.*fRandom.Gaus(fEDepE, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fEDepE));
         //std::cout << "light = " << light << std::endl;
 
         if((fSettings->SortNumberOfEvents()==0)||(fSettings->SortNumberOfEvents()>=fEventNumber) ) {
