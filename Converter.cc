@@ -19,6 +19,7 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
         //add sub-directory and tree name to file name
         fileName->append(fSettings->NtupleName());
         fChain.Add(fileName->c_str());
+        fRandom.SetSeed(1);
     }
 
 
@@ -1457,6 +1458,7 @@ bool Converter::Run() {
         //create energy-resolution smeared energy
         smearedEnergy = fRandom.Gaus(fDepEnergy,fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy));
         
+
         // light yield functions
         double light = 0.;
         double centroidEkin = 0.;        
@@ -1468,7 +1470,8 @@ bool Converter::Run() {
             //std::cout << "scatter " << j << " || pType = " << fParticleTypeVector->at(j) << " || eDep = " << fEdepVector->at(j) << std::endl;
             if(fParticleTypeVector->at(j) == 2 || fParticleTypeVector->at(j) == 3) { 
                 centroidEkin = fEkinVector->at(j);  
-                centroidEres = fEdepVector->at(j);
+                //centroidEres = fEdepVector->at(j);
+                centroidEres = fEkinVector->at(j)-fEdepVector->at(j);
             } 
             if(fParticleTypeVector->at(j) == 4) { 
                 centroidEkin = LightOutput(fEkinVector->at(j),fSettings->ProtonCoeff()); 
@@ -1496,14 +1499,27 @@ bool Converter::Run() {
             }
             if(centroidEkin>0){ 
                 light += 1000.*fRandom.Gaus(centroidEkin, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEkin));
+                //light += 1000.*fRandom.Gaus(1, 0.1);
+                if(i<10 && fParticleTypeVector->at(j) == 4) {
+                    std::cout << "centroidEkin = " << centroidEkin << std::endl;
+                    std::cout << "centroidEres = " << centroidEkin << std::endl;
+                    std::cout << "Res(kin) = " << fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEkin) << std::endl;
+                    std::cout << "light so far = " << light << std::endl;
+                }
             }
             if(centroidEres>0){ 
                 light -= 1000.*fRandom.Gaus(centroidEres, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEres));
+                //light -= 1000.*fRandom.Gaus(1, 0.1);
+                if(i<10 && fParticleTypeVector->at(j) == 4) {
+                    std::cout << "centroidEkin = " << centroidEkin << std::endl;
+                    std::cout << "centroidEres = " << centroidEkin << std::endl;
+                    std::cout << "Res(res) = " << fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEres) << std::endl;
+                    std::cout << "light so far = " << light << std::endl;
+                }
             }    
         }
-    
-        //std::cout << "light of evt " << i << " = " << light << std::endl;
-
+        if(i<10) std::cout << std::endl;
+        
         //double DeuteronCentroid = LightOutput(fEDepD/1000., fSettings->DeuteronCoeff()); 
         //double ProtonCentroid = LightOutput(fEDepP/1000., fSettings->ProtonCoeff()); 
         //double CarbonCentroid = LightOutput(fEDepC/1000., fSettings->CarbonCoeff());

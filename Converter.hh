@@ -139,7 +139,7 @@ private:
     std::vector<Int_t>* fParticleTypeVector;
 
     double LightOutput(double E, std::vector<double> & coeff) {
-        return coeff[0]*E-coeff[1]*(1.-TMath::Exp(-1.0*coeff[2]*TMath::Power(E,coeff[3])));
+        return ( coeff[0]*E-coeff[1]*(1.-TMath::Exp(-1.0*coeff[2]*TMath::Power(E,coeff[3]))) );
     }
 
     double fSmearedEnergy;
