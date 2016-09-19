@@ -1473,67 +1473,43 @@ bool Converter::Run() {
                 //centroidEres = fEdepVector->at(j);
                 centroidEres = fEkinVector->at(j)-fEdepVector->at(j);
             } 
-            if(fParticleTypeVector->at(j) == 4) { 
+            else if(fParticleTypeVector->at(j) == 4) { 
                 centroidEkin = LightOutput(fEkinVector->at(j),fSettings->ProtonCoeff()); 
                 centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->ProtonCoeff()); 
             } 
-            if(fParticleTypeVector->at(j) == 6) { 
+            else if(fParticleTypeVector->at(j) == 6) { 
                 centroidEkin = LightOutput(fEkinVector->at(j),fSettings->DeuteronCoeff()); 
                 centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->DeuteronCoeff()); 
             } 
-            if(fParticleTypeVector->at(j) == 7) { 
+            else if(fParticleTypeVector->at(j) == 7) { 
                 centroidEkin = LightOutput(fEkinVector->at(j),fSettings->CarbonCoeff()); 
                 centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->CarbonCoeff()); 
             } 
-            if(fParticleTypeVector->at(j) == 8) { 
+            else if(fParticleTypeVector->at(j) == 8) { 
                 centroidEkin = LightOutput(fEkinVector->at(j),fSettings->AlphaCoeff()); 
                 centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->AlphaCoeff()); 
             } 
-            if(fParticleTypeVector->at(j) == 9) { 
+            else if(fParticleTypeVector->at(j) == 9) { 
                 centroidEkin = LightOutput(fEkinVector->at(j),fSettings->BeCoeff()); 
                 centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->BeCoeff()); 
             } 
-            if(fParticleTypeVector->at(j) == 10) { 
+            else if(fParticleTypeVector->at(j) == 10) { 
                 centroidEkin = LightOutput(fEkinVector->at(j),fSettings->BCoeff()); 
                 centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->BCoeff()); 
             }
+            else{
+                centroidEkin = 0.;
+                centroidEres = 0.;
+            }   
+
             if(centroidEkin>0){ 
                 light += 1000.*fRandom.Gaus(centroidEkin, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEkin));
-                //light += 1000.*fRandom.Gaus(1, 0.1);
-                if(i<10 && fParticleTypeVector->at(j) == 4) {
-                    std::cout << "centroidEkin = " << centroidEkin << std::endl;
-                    std::cout << "centroidEres = " << centroidEkin << std::endl;
-                    std::cout << "Res(kin) = " << fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEkin) << std::endl;
-                    std::cout << "light so far = " << light << std::endl;
-                }
             }
             if(centroidEres>0){ 
                 light -= 1000.*fRandom.Gaus(centroidEres, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEres));
-                //light -= 1000.*fRandom.Gaus(1, 0.1);
-                if(i<10 && fParticleTypeVector->at(j) == 4) {
-                    std::cout << "centroidEkin = " << centroidEkin << std::endl;
-                    std::cout << "centroidEres = " << centroidEkin << std::endl;
-                    std::cout << "Res(res) = " << fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEres) << std::endl;
-                    std::cout << "light so far = " << light << std::endl;
-                }
-            }    
+            }
         }
-        if(i<10) std::cout << std::endl;
-        
-        //double DeuteronCentroid = LightOutput(fEDepD/1000., fSettings->DeuteronCoeff()); 
-        //double ProtonCentroid = LightOutput(fEDepP/1000., fSettings->ProtonCoeff()); 
-        //double CarbonCentroid = LightOutput(fEDepC/1000., fSettings->CarbonCoeff());
-        //double BeCentroid = LightOutput(fEDepBe/1000., fSettings->BeCoeff());
-        //double BCentroid = LightOutput(fEDepB/1000., fSettings->BCoeff());
-        //double AlphaCentroid = LightOutput(fEDepA/1000., fSettings->AlphaCoeff());
-        //if(fEDepD > 1.) light += 1000.*fRandom.Gaus(DeuteronCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,DeuteronCentroid));
-        //if(fEDepP > 1.) light += 1000.*fRandom.Gaus(ProtonCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,ProtonCentroid));
-        //if(fEDepC > 1.) light += 1000.*fRandom.Gaus(CarbonCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,CarbonCentroid));
-        //if(fEDepBe > 1.) light += 1000.*fRandom.Gaus(BeCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,BeCentroid));
-        //if(fEDepB > 1.) light += 1000.*fRandom.Gaus(BCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,BCentroid));
-        //if(fEDepA > 1.) light += 1000.*fRandom.Gaus(AlphaCentroid, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,AlphaCentroid));
-        //if(fEDepE > 1.) light += 1000.*fRandom.Gaus(fEDepE, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fEDepE));
-        //std::cout << "light = " << light << std::endl;
+        if(light>0.) light+=8.5;
 
         if((fSettings->SortNumberOfEvents()==0)||(fSettings->SortNumberOfEvents()>=fEventNumber) ) {
             //if the hit is above the threshold, we add it to the vector
