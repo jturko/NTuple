@@ -164,6 +164,28 @@ private:
     std::vector<double> fBCoeff;
     std::vector<double> fAlphaCoeff;
     
+    // for TI-STAR
+    // variable for the run
+    double  fTSBeamEnergy;
+    double  fTSGasTargetLength;
+    int     fTSNStripsX;
+    int     fTSNStripsY;
+    double  fTSLengthX;
+    double  fTSLengthY;
+    double  fTSStripWidthX;
+    double  fTSStripWidthY;
+    
+    // from the generator tree
+    double fTSGenReactionBeamEnergy;
+    double fTSGenReactionBeamEnergyCM;
+    double fTSGenReactionX;
+    double fTSGenReactionY;
+    double fTSGenReactionZ;
+    double fTSGenRecoilTheta;
+    double fTSGenRecoilPhi;
+    double fTSGenRecoilEnergy;
+    UInt_t fTSGenReactionSim;
+    
 };
 
 #endif

@@ -15,7 +15,8 @@ LIB_DIR 	   = $(HOME)/lib
 ROOTLIBS    := $(shell root-config --libs)
 ROOTINC     := -I$(shell root-config --incdir)
 
-COMM_DIR 	= $(HOME)/CommandLineInterface
+# COMM_DIR 	= $(HOME)/CommandLineInterface
+COMM_DIR 	= $(HOME)/programs/CommandLineInterface # modified for my (jturko) CommandLineInterface install location
 
 INCLUDES    = -I$(COMM_DIR) -I.
 
@@ -34,6 +35,8 @@ LOADLIBES = \
 	Converter.o \
 	Griffin.o \
 	Settings.o \
+    Particle.o \
+    ParticleMC.o \
 	$(NAME)Dictionary.o
 
 # -------------------- implicit rules --------------------
