@@ -1,5 +1,7 @@
 #include <iostream>
 #include <iomanip>
+#include <vector>
+#include <string>
 
 #include "TFile.h"
 #include "TH1F.h"

@@ -129,7 +129,6 @@ Settings::Settings(std::string fileName, int verbosityLevel)
     fThreshold[8500].resize(1,std::vector<double>(1));
     fThresholdWidth[8500].resize(1,std::vector<double>(1));
     fTimeWindow[8500].resize(1,std::vector<double>(1));
-    
     fProtonCoeff.resize(4);
     fDeuteronCoeff.resize(4);
     fCarbonCoeff.resize(4);
@@ -369,6 +368,14 @@ Settings::Settings(std::string fileName, int verbosityLevel)
         fQuenching[isotope] = env.GetValue(Form("Descant.Quenching.%d",isotope),1.0);
         //std::cout << "fQuenching[" << isotope << "] = " << fQuenching[isotope] << std::endl;
     }
+
+
+	 //testcan
+	 double fanoFactor = env.GetValue("Testcan.Resolution.FanoFactor",20.);
+	 fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("%f*TMath::Sqrt(x)",fanoFactor), 0., 100000.));
+	 fThreshold[8500][0][0] = env.GetValue("Testcan.Threshold.keV",0.);
+	 fThresholdWidth[8500][0][0] = env.GetValue("Testcan.ThresholdWidth.keV",0.);
+	 fTimeWindow[8500][0][0] = env.GetValue("Testcan.TimeWindow.sec",0.);
 
 
     // Paces
