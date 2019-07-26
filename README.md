@@ -1,6 +1,6 @@
 # NTuple
 
-A program that sorts the Geant4 NTuple output into histograms, matrices, etc. This program accepts a settings file that includes thresholds, resolutions, etc, for each detection system. This program was written by Vinzenz Bildstein, and later modified and edited by Evan Rand. 
+A program that sorts the Geant4 NTuple output into histograms, matrices, etc. This program accepts a settings file that includes thresholds, resolutions, etc, for each detection system. This program was written by Vinzenz Bildstein, and later modified and edited by Evan Rand. This branch of the code is for modifications to do with TI-STAR, and will rely heavily on the older [TRexGeant4Analysis](https://github.com/VinzenzBildstein/TRexGeant4Analysis) code.
 
 -----------------------------------------
  Installation
