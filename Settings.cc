@@ -34,6 +34,17 @@ Settings::Settings(std::string fileName, int verbosityLevel)
 
     fGriffinAddbackVectorCrystalFaceDistancemm = env.GetValue("GriffinAddbackVectorCrystalFaceDistancemm",110.0);
 
+    // TI-STAR detector/run variables
+    fTSNtupleName =         env.GetValue("TSNtupleName","treeGen");
+    fTSBeamEnergy =         env.GetValue("TSBeamEnergy", 792.0); // in MeV
+    fTSGasTargetLength =    env.GetValue("TSGasTargetLength", 16.0); // in cm
+    fTSLengthX =            env.GetValue("TSLengthX", 100.0); // in mm
+    fTSLengthY =            env.GetValue("TSLengthY", 100.0); // in mm
+    fTSStripWidthX =        env.GetValue("TSStripWidthX", 0.1); // in mm
+    fTSStripWidthY =        env.GetValue("TSStripWidthY", 0.1); // in mm
+    fTSnStripsX =           static_cast<int>(fTSLengthX/fTSStripWidthX); std::cout<<"nStrips in x = "<<fTSnStripsX<<" ("<<fTSLengthX<<"/"<<fTSStripWidthX<<")"<<std::endl;
+    fTSnStripsY =           static_cast<int>(fTSLengthY/fTSStripWidthY); std::cout<<"nStrips in y = "<<fTSnStripsY<<" ("<<fTSLengthY<<"/"<<fTSStripWidthY<<")"<<std::endl;
+
     // Griffin
     fResolution[1000].resize(16);
     fThreshold[1000].resize(16,std::vector<double>(4));

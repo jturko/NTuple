@@ -662,6 +662,17 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fPacesDetector      = new std::vector<Detector>;
     fTree.Branch("PacesArray",&fPacesArray, fSettings->BufferSize());
     fTree.Branch("PacesDetector",&fPacesDetector, fSettings->BufferSize());
+
+    // TI-STAR
+    fTISTARArray        = new std::vector<Detector>;
+    fTISTARFirstLayer   = new std::vector<Detector>;
+    fTISTARSecondLayer  = new std::vector<Detector>;
+    fTISTARThirdLayer   = new std::vector<Detector>;
+    fTree.Branch("TISTARArray",         &fTISTARArray,      fSettings->BufferSize());     
+    fTree.Branch("TISTARFirstLayer",    &fTISTARFirstLayer, fSettings->BufferSize()); 
+    fTree.Branch("TISTARSecondLayer",   &fTISTARSecondLayer,fSettings->BufferSize()); 
+    fTree.Branch("TISTARThirdLayer",    &fTISTARThirdLayer, fSettings->BufferSize());
+    
 }
 
 Converter::~Converter() {

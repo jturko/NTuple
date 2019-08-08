@@ -16,6 +16,11 @@ public:
         return fNtupleName;
     }
 
+    // TI-STAR ntuple name
+    std::string TSNTupleName() {
+        return fTSNtupleName;
+    }
+
     int VerbosityLevel() {
         return fVerbosityLevel;
     }
@@ -130,6 +135,7 @@ public:
 
 private:
     std::string fNtupleName;
+    std::string fTSNtupleName;
 
     int fVerbosityLevel;
     int fBufferSize;
@@ -168,8 +174,8 @@ private:
     // variable for the run
     double  fTSBeamEnergy;
     double  fTSGasTargetLength;
-    int     fTSNStripsX;
-    int     fTSNStripsY;
+    int     fTSnStripsX;
+    int     fTSnStripsY;
     double  fTSLengthX;
     double  fTSLengthY;
     double  fTSStripWidthX;
@@ -184,7 +190,7 @@ private:
     double fTSGenRecoilTheta;
     double fTSGenRecoilPhi;
     double fTSGenRecoilEnergy;
-    UInt_t fTSGenReactionSim;
+    int    fTSGenReactionSim;
     
 };
 

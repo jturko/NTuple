@@ -87,6 +87,8 @@ private:
     TFile* fOutput;
     TTree fTree;
     TRandom3 fRandom;
+    
+    TChain fTSChain; // TI-STAR generator tree chain
 
     Int_t LaBrGriffinNeighbours_det[8][3];
     Int_t LaBrGriffinNeighbours_cry[8][3];
@@ -187,6 +189,12 @@ private:
     std::vector<Detector>* fPacesArray;
     std::vector<Detector>* fPacesDetector;
 
+    // TI-STAR
+    std::vector<Detector>* fTISTARArray;
+    std::vector<Detector>* fTISTARFirstLayer;
+    std::vector<Detector>* fTISTARSecondLayer;
+    std::vector<Detector>* fTISTARThirdLayer;
+    
     //histograms
     std::map<std::string,TList*> fHistograms;
 };
