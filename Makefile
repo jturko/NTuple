@@ -6,6 +6,8 @@
 
 # := is only evaluated once
 
+include $(G4INSTALL)/config/architecture.gmk
+
 SHELL 		= /bin/sh
 
 NAME		   = NTuple
@@ -15,12 +17,14 @@ LIB_DIR 	   = $(HOME)/lib
 ROOTLIBS    := $(shell root-config --libs)
 ROOTINC     := -I$(shell root-config --incdir)
 
+# COMM_DIR modified for my (jturko) CommandLineInterface install location
 # COMM_DIR 	= $(HOME)/CommandLineInterface
-COMM_DIR 	= $(HOME)/programs/CommandLineInterface # modified for my (jturko) CommandLineInterface install location
+COMM_DIR 	= $(HOME)/programs/CommandLineInterface
+SIM_DIR     = $(HOME)/geant4_sims/detectorSimulations_v10_TI-STAR
 
-INCLUDES    = -I$(COMM_DIR) -I.
+INCLUDES    = -I$(COMM_DIR) -I$(SIM_DIR)/include -I$(G4INCLUDE) -I.
 
-LIBRARIES	= CommandLineInterface Utilities
+LIBRARIES	= CommandLineInterface Utilities CustomClasses
 
 CC		      = gcc
 CXX         = g++
@@ -29,7 +33,7 @@ CXXFLAGS	   = -std=gnu++0x -pedantic -Wall -Wno-long-long -g -O3
 
 LDFLAGS		= -g -fPIC
 
-LDLIBS 		= -L$(LIB_DIR) -Wl,-rpath,/opt/gcc/lib64 $(ROOTLIBS) $(addprefix -l,$(LIBRARIES))
+LDLIBS 		= -L$(LIB_DIR) -L$(SIM_DIR)/build -Wl,-rpath,/opt/gcc/lib64 $(ROOTLIBS) $(addprefix -l,$(LIBRARIES)) 
 
 LOADLIBES = \
 	Converter.o \
@@ -64,7 +68,7 @@ all:  $(NAME)
 
 DEPENDENCIES = \
 	Griffin.hh \
-	RootLinkDef.h
+    RootLinkDef.h
 
 $(NAME)Dictionary.o: $(NAME)Dictionary.cc
 	 $(CXX) -fPIC $(CXXFLAGS) $(CPPFLAGS) -c $<

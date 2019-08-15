@@ -3,14 +3,15 @@
 #include "TEnv.h"
 #include "TString.h"
 
-Settings::Settings(std::string fileName, int verbosityLevel)
-    : fVerbosityLevel(verbosityLevel) {
+Settings::Settings(std::string fileName, int verbosityLevel) : 
+    fVerbosityLevel(verbosityLevel)
+    {
     TEnv env;
     env.ReadFile(fileName.c_str(),kEnvLocal);
 
     //  env.PrintEnv();
 
-    fNtupleName = env.GetValue("NtupleName","/ntuple/ntuple");
+    fNtupleName = env.GetValue("NtupleName","/ntuple");
 
     fBufferSize = env.GetValue("BufferSize",1024000);
 

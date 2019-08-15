@@ -549,9 +549,6 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
 
     fSceptarHit = false;
 
-    fEkinVector = NULL;
-    fEdepVector = NULL;
-    fParticleTypeVector = NULL;
     //add branches to input chain
     fChain.SetBranchAddress("eventNumber", &fEventNumber);
     fChain.SetBranchAddress("trackID", &fTrackID);
@@ -567,21 +564,6 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fChain.SetBranchAddress("posy", &fPosy);
     fChain.SetBranchAddress("posz", &fPosz);
     fChain.SetBranchAddress("time", &fTime);
-    fChain.SetBranchAddress("eDepD", &fEDepD);
-    fChain.SetBranchAddress("eDepC", &fEDepC);
-    fChain.SetBranchAddress("eDepP", &fEDepP);
-    fChain.SetBranchAddress("eDepA", &fEDepA);
-    fChain.SetBranchAddress("eDepE", &fEDepE);
-    fChain.SetBranchAddress("eDepN", &fEDepN);
-    fChain.SetBranchAddress("eDepOther", &fEDepOther);
-    fChain.SetBranchAddress("eDepBe", &fEDepBe);
-    fChain.SetBranchAddress("eDepB", &fEDepB);
-    //fChain.SetBranchAddress("eKinVector",fEkinVector,&fEkinBranch);
-    //fChain.SetBranchAddress("eDepVector",fEdepVector,&fEdepBranch);
-    //fChain.SetBranchAddress("particleTypeVector",fParticleTypeVector,&fParticleTypeBranch);
-    fChain.SetBranchAddress("eKinVector",&fEkinVector);
-    fChain.SetBranchAddress("eDepVector",&fEdepVector);
-    fChain.SetBranchAddress("particleTypeVector",&fParticleTypeVector);
 
     //create output file
     fOutput = new TFile(outputFileName.c_str(),"recreate");
@@ -1424,59 +1406,6 @@ bool Converter::Run() {
         }
         //create energy-resolution smeared energy
         smearedEnergy = fRandom.Gaus(fDepEnergy,fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy));
-        
-
-        // light yield functions
-        double light = 0.;
-        double centroidEkin = 0.;        
-        double centroidEres = 0.;        
-
-        long unsigned int nScatters = fEdepVector->size();
-        //std::cout << "looping through " << nScatters << " scatters" << std::endl;
-        for(long unsigned int j = 0; j < nScatters; ++j) {
-            //std::cout << "scatter " << j << " || pType = " << fParticleTypeVector->at(j) << " || eDep = " << fEdepVector->at(j) << std::endl;
-            if(fParticleTypeVector->at(j) == 2 || fParticleTypeVector->at(j) == 3) { 
-                centroidEkin = fEkinVector->at(j);  
-                //centroidEres = fEdepVector->at(j);
-                centroidEres = fEkinVector->at(j)-fEdepVector->at(j);
-            } 
-            else if(fParticleTypeVector->at(j) == 4) { 
-                centroidEkin = LightOutput(fEkinVector->at(j),fSettings->ProtonCoeff()); 
-                centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->ProtonCoeff()); 
-            } 
-            else if(fParticleTypeVector->at(j) == 6) { 
-                centroidEkin = LightOutput(fEkinVector->at(j),fSettings->DeuteronCoeff()); 
-                centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->DeuteronCoeff()); 
-            } 
-            else if(fParticleTypeVector->at(j) == 7) { 
-                centroidEkin = LightOutput(fEkinVector->at(j),fSettings->CarbonCoeff()); 
-                centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->CarbonCoeff()); 
-            } 
-            else if(fParticleTypeVector->at(j) == 8) { 
-                centroidEkin = LightOutput(fEkinVector->at(j),fSettings->AlphaCoeff()); 
-                centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->AlphaCoeff()); 
-            } 
-            else if(fParticleTypeVector->at(j) == 9) { 
-                centroidEkin = LightOutput(fEkinVector->at(j),fSettings->BeCoeff()); 
-                centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->BeCoeff()); 
-            } 
-            else if(fParticleTypeVector->at(j) == 10) { 
-                centroidEkin = LightOutput(fEkinVector->at(j),fSettings->BCoeff()); 
-                centroidEres = LightOutput(fEkinVector->at(j)-fEdepVector->at(j),fSettings->BCoeff()); 
-            }
-            else{
-                centroidEkin = 0.;
-                centroidEres = 0.;
-            }   
-
-            if(centroidEkin>0){ 
-                light += 1000.*fRandom.Gaus(centroidEkin, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEkin));
-            }
-            if(centroidEres>0){ 
-                light -= 1000.*fRandom.Gaus(centroidEres, fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,centroidEres));
-            }
-        }
-        if(light>0.) light+=8.5;
 
         if((fSettings->SortNumberOfEvents()==0)||(fSettings->SortNumberOfEvents()>=fEventNumber) ) {
             //if the hit is above the threshold, we add it to the vector
@@ -1526,16 +1455,14 @@ bool Converter::Run() {
                         //fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                         //fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepD, deuteronSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                         //fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD , carbonSmearedEnergy+deuteronSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
-                        fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD , light, TVector3(fPosx,fPosy,fPosz), fTime));
+                        fDescantWhiteDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy , smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                         break;
                     case 8050:
                         fDescantYellowDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                         break;
 
                     case 8500:
-                        fTestcanDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD+fEDepP+fEDepBe+fEDepB+fEDepE+fEDepA, light, TVector3(fPosx,fPosy,fPosz), fTime));
-                        //fTestcanDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD+fEDepP+fEDepBe+fEDepB+fEDepE+fEDepA, carbonSmearedEnergy+deuteronSmearedEnergy+protonSmearedEnergy+BeSmearedEnergy+BSmearedEnergy+eSmearedEnergy+alphaSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
-                        //fTestcanDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fEDepC+fEDepD+fEDepP+fEDepBe+fEDepB+fEDepE+fEDepA, carbonSmearedEnergy+deuteronSmearedEnergy+protonSmearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        fTestcanDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                     break;
 
                     case 9000:

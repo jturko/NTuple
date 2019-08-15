@@ -126,19 +126,6 @@ private:
     Double_t fPosy;
     Double_t fPosz;
     Double_t fTime;
-    Double_t fEDepD;
-    Double_t fEDepC;
-    Double_t fEDepP;
-    Double_t fEDepA;
-    Double_t fEDepE;
-    Double_t fEDepN;
-    Double_t fEDepOther;
-    Double_t fEDepBe;
-    Double_t fEDepB;
-
-    std::vector<Double_t>* fEkinVector;
-    std::vector<Double_t>* fEdepVector;
-    std::vector<Int_t>* fParticleTypeVector;
 
     double LightOutput(double E, std::vector<double> & coeff) {
         return ( coeff[0]*E-coeff[1]*(1.-TMath::Exp(-1.0*coeff[2]*TMath::Power(E,coeff[3]))) );
