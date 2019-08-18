@@ -8,8 +8,11 @@
 #include "Utilities.hh"
 #include "LightYield.hh"
 
+#include "TRexSettings.hh"
+
 Converter::Converter(std::vector<std::string>& inputFileNames, const std::string& outputFileName, Settings* settings)
     : fSettings(settings) {
+    TRexSettings * sett = NULL;
     //create TChain to read in all input files
     for(auto fileName = inputFileNames.begin(); fileName != inputFileNames.end(); ++fileName) {
         if(!FileExists(*fileName)) {
@@ -20,6 +23,10 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
         fileName->append(fSettings->NtupleName());
         fChain.Add(fileName->c_str());
         fRandom.SetSeed(1);
+        if(!sett) {
+            sett = static_cast<TRexSettings*>(fChain.GetFile()->Get("settings"));
+            sett->Print();
+        }
     }
 
 

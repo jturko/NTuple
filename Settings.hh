@@ -7,8 +7,6 @@
 
 #include "TF1.h"
 
-#include "TRexSettings.hh"
-
 class Settings {
 public:
     Settings(std::string, int);
@@ -194,8 +192,6 @@ private:
     double fTSGenRecoilEnergy;
     int    fTSGenReactionSim;
     
-    TRexSettings fTRexSettings;
-
 };
 
 #endif
