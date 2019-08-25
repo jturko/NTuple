@@ -71,25 +71,49 @@ public:
 
     double Resolution(int systemID, int detectorID, int crystalID, double en) {
         if(fResolution.find(systemID) != fResolution.end()) {
-            return fResolution[systemID].at(detectorID).at(crystalID).Eval(en);
+            try{ 
+                return fResolution[systemID].at(detectorID).at(crystalID).Eval(en);
+            }
+            catch(const std::out_of_range& e) {
+                std::cout<<"Out of Range error w/ call to Settings::Resolution("<<systemID<<", "<<detectorID<<", "<<crystalID<<", "<<en<<" ), returning 0 ..."<<std::endl;
+                return 0.;
+            }
         }
         return 0.;
     }
     double Threshold(int systemID, int detectorID, int crystalID) {
         if(fThreshold.find(systemID) != fThreshold.end()) {
-            return fThreshold[systemID].at(detectorID).at(crystalID);
+            try{
+                return fThreshold[systemID].at(detectorID).at(crystalID);
+            }
+            catch(const std::out_of_range& e) {
+                std::cout<<"Out of Range error w/ call to Settings::Threshold("<<systemID<<", "<<detectorID<<", "<<crystalID<<" ), returning 0 ..."<<std::endl;
+                return 0;
+            }
         }
         return 0.001;
     }
     double ThresholdWidth(int systemID, int detectorID, int crystalID) {
         if(fThresholdWidth.find(systemID) != fThresholdWidth.end()) {
-            return fThresholdWidth[systemID].at(detectorID).at(crystalID);
+            try{
+                return fThresholdWidth[systemID].at(detectorID).at(crystalID);
+            }
+            catch(const std::out_of_range& e) {
+                std::cout<<"Out of Range error w/ call to Settings::ThresholdWidth("<<systemID<<", "<<detectorID<<", "<<crystalID<<" ), returning 0 ..."<<std::endl;
+                return 0;
+            }
         }
         return 0.;
     }
     double TimeWindow(int systemID, int detectorID, int crystalID) {
         if(fTimeWindow.find(systemID) != fTimeWindow.end()) {
-            return fTimeWindow[systemID].at(detectorID).at(crystalID);
+            try{
+                return fTimeWindow[systemID].at(detectorID).at(crystalID);
+            }
+            catch(const std::out_of_range& e) {
+                std::cout<<"Out of Range error w/ call to Settings::TimeWindow("<<systemID<<", "<<detectorID<<", "<<crystalID<<" ), returning 0 ..."<<std::endl;
+                return 0;
+            }
         }
         return 0.;
     }
