@@ -653,14 +653,8 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fTree.Branch("PacesDetector",&fPacesDetector, fSettings->BufferSize());
 
     // TI-STAR
-    fTISTARArray        = new std::vector<Detector>;
-    fTISTARFirstLayer   = new std::vector<Detector>;
-    fTISTARSecondLayer  = new std::vector<Detector>;
-    fTISTARThirdLayer   = new std::vector<Detector>;
-    fTree.Branch("TISTARArray",         &fTISTARArray,      fSettings->BufferSize());     
-    fTree.Branch("TISTARFirstLayer",    &fTISTARFirstLayer, fSettings->BufferSize()); 
-    fTree.Branch("TISTARSecondLayer",   &fTISTARSecondLayer,fSettings->BufferSize()); 
-    fTree.Branch("TISTARThirdLayer",    &fTISTARThirdLayer, fSettings->BufferSize());
+    fTISTARStrip        = new std::vector<Detector>;
+    fTree.Branch("TISTARStrip",         &fTISTARStrip,      fSettings->BufferSize());     
     
 }
 
@@ -1362,6 +1356,9 @@ bool Converter::Run() {
             FillHistDetector1DGamma(hist1D, fPacesArray, "paces_crystal_unsup_edep_sum", "Paces1D");
             FillHistDetector1DGammaNR(hist1D, fPacesArray, "paces_crystal_unsup_edep_sum_nr", "0RES_Paces1D");
 
+            // TI-STAR
+            FillHistDetector1DGamma(hist1D, fTISTARStrip, "TISTAR_crystal_unsup_edep", "TISTAR1D");
+            FillHistDetector1DGammaNR(hist1D, fTISTARStrip, "TISTAR_crystal_unsup_edep_nr", "0RES_TISTAR1D");
 
             fGriffinCrystal->clear();
             fGriffinDetector->clear();
@@ -1397,6 +1394,8 @@ bool Converter::Run() {
             fPacesDetector->clear();
             fPacesArray->clear();
 
+            fTISTARStrip->clear();
+
             eventNumber = fEventNumber;
             belowThreshold.clear();
             outsideTimeWindow.clear();
@@ -1408,11 +1407,25 @@ bool Converter::Run() {
 
         // if fSystemID is NOT GRIFFIN, then set fCryNumber to zero
         // This is a quick fix to solve resolution and threshold values from Settings.cc
-        if(fSystemID >= 2000) {
+        // Modified to include TI-STAR, which does use the systemID
+        if(fSystemID >= 2000 && fSystemID != 9500) {
             fCryNumber = 0;
+        }
+
+        // if fSystemID is TISTAR, decrement the detector and crystal number 
+        // this is to solve the numbering problem of the layers/strips, which both
+        // start at 1, vs. the vector index which starts at 0
+        if(fSystemID == 9500) {
+            fDetNumber -= 1;
+            fCryNumber -= 1;
         }
         //create energy-resolution smeared energy
         smearedEnergy = fRandom.Gaus(fDepEnergy,fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy));
+        //std::cout << "fDepEnergy= "<<fDepEnergy<<
+        //             ", smearedEnergy= "<<smearedEnergy<<
+        //             ", fSystemID= "<<fSystemID<<
+        //             ", fDetNumber= "<<fDetNumber<<
+        //             ", fCryNumber= "<<fCryNumber<<std::endl;
 
         if((fSettings->SortNumberOfEvents()==0)||(fSettings->SortNumberOfEvents()>=fEventNumber) ) {
             //if the hit is above the threshold, we add it to the vector
@@ -1474,6 +1487,10 @@ bool Converter::Run() {
 
                     case 9000:
                         fPacesDetector->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        break;
+                    
+                    case 9500:
+                        fTISTARStrip->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
                         break;
 
                     default:

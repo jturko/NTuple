@@ -154,6 +154,13 @@ Settings::Settings(std::string fileName, int verbosityLevel) :
     fThresholdWidth[9000].resize(5,std::vector<double>(1));
     fTimeWindow[9000].resize(5,std::vector<double>(1));
 
+    // TI-STAR
+    // resizing to 3 for the each of the layers, the each subvector to 4 for a maximum of 4 strips per layer
+    fResolution[9500].resize(3);
+    fThreshold[9500].resize(3,std::vector<double>(4));
+    fThresholdWidth[9500].resize(3,std::vector<double>(4));
+    fTimeWindow[9500].resize(3,std::vector<double>(4));
+
     double offset, linear, quadratic, cubic;
     double A, B, C;
     //A=0.0826;B=0.2673;C=0.0548; 
@@ -403,6 +410,21 @@ Settings::Settings(std::string fileName, int verbosityLevel) :
         fTimeWindow[9000][detector][0] = env.GetValue(Form("Paces.%d.TimeWindow.sec",detector),0.0);
     }
 
+    // TI-STAR
+    for(int detector = 0; detector < 3; detector++) {
+        for(int crystal = 0; crystal < 4; crystal++) {
+            offset = env.GetValue(Form("TISTAR.%d.%d.Resolution.Offset",detector,crystal),0.0);
+            linear = env.GetValue(Form("TISTAR.%d.%d.Resolution.Linear",detector,crystal),0.0);
+            quadratic = env.GetValue(Form("TISTAR.%d.%d.Resolution.Quadratic",detector,crystal),0.0);
+            cubic = env.GetValue(Form("TISTAR.%d.%d.Resolution.Cubic",detector,crystal),0.0);
+            fResolution[9500][detector].push_back(TF1(Form("TISTAR.%d.%d.Resolution",detector,crystal),
+                                                      Form("0.0"),0.,100000.));
+            fThreshold[9500][detector][crystal] = env.GetValue(Form("TISTAR.%d.%d.Threshold.keV",detector,crystal),10.);
+            fThresholdWidth[9500][detector][crystal] = env.GetValue(Form("TISTAR.%d.%d.ThresholdWidth.keV",detector,crystal),2.);
+            fTimeWindow[9500][detector][crystal] = env.GetValue(Form("TISTAR.%d.%d.TimeWindow.sec",detector,crystal),0.);
+        }
+    }
+
     fNofBins["Statistics"] = env.GetValue("Histogram.Statistics.NofBins",64);
     fRangeLow["Statistics"] = env.GetValue("Histogram.Statistics.RangeLow.keV",0.);
     fRangeHigh["Statistics"] = env.GetValue("Histogram.Statistics.RangeHigh.keV",64.);
@@ -446,5 +468,13 @@ Settings::Settings(std::string fileName, int verbosityLevel) :
     fNofBins["0RES_Testcan1D"] = env.GetValue("Histogram.1D.Testcan.NofBins",4096);
     fRangeLow["0RES_Testcan1D"] = env.GetValue("Histogram.1D.Testcan.RangeLow.keV",0.5);
     fRangeHigh["0RES_Testcan1D"] = env.GetValue("Histogram.1D.Testcan.RangeHigh.keV",4096.5);
+
+    fNofBins["TISTAR1D"] = env.GetValue("Histogram.1D.TISTAR.NofBins",4096);
+    fRangeLow["TISTAR1D"] = env.GetValue("Histogram.1D.TISTAR.RangeLow.keV",0.5);
+    fRangeHigh["TISTAR1D"] = env.GetValue("Histogram1D.TISTAR.RangeHigh.keV",8192.0);
+    
+    fNofBins["0RES_TISTAR1D"] = env.GetValue("Histogram.1D.TISTAR.NofBins",4096);
+    fRangeLow["0RES_TISTAR1D"] = env.GetValue("Histogram.1D.TISTAR.RangeLow.keV",0.5);
+    fRangeHigh["0RES_TISTAR1D"] = env.GetValue("Histogram1D.TISTAR.RangeHigh.keV",8192.0);
 
 }
