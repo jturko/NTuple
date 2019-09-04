@@ -737,5 +737,74 @@ Griffin.15.3.Resolution.Cubic:		0.
 Griffin.15.3.Threshold.keV:		0.00
 Griffin.15.3.ThresholdWidth.keV:	0.00
 
+### TI-STAR ###
+
+TISTAR.Layer0.Strip0.Resolution.Offset:     0.0
+TISTAR.Layer0.Strip0.Resolution.Linear:     0.0
+TISTAR.Layer0.Strip0.Resolution.Quadratic:  0.0
+TISTAR.Layer0.Strip0.Resolution.Cubic:      0.0
+TISTAR.Layer0.Strip0.Threshold.keV:         0.0
+TISTAR.Layer0.Strip0.ThresholdWidth.keV:    0.0
+TISTAR.Layer0.Strip0.TimeWindow:            0.0
+
+TISTAR.Layer0.Strip1.Resolution.Offset:     0.0
+TISTAR.Layer0.Strip1.Resolution.Linear:     0.0
+TISTAR.Layer0.Strip1.Resolution.Quadratic:  0.0
+TISTAR.Layer0.Strip1.Resolution.Cubic:      0.0
+TISTAR.Layer0.Strip1.Threshold.keV:         0.0
+TISTAR.Layer0.Strip1.ThresholdWidth.keV:    0.0
+TISTAR.Layer0.Strip1.TimeWindow:            0.0
+
+TISTAR.Layer0.Strip2.Resolution.Offset:     0.0
+TISTAR.Layer0.Strip2.Resolution.Linear:     0.0
+TISTAR.Layer0.Strip2.Resolution.Quadratic:  0.0
+TISTAR.Layer0.Strip2.Resolution.Cubic:      0.0
+TISTAR.Layer0.Strip2.Threshold.keV:         0.0
+TISTAR.Layer0.Strip2.ThresholdWidth.keV:    0.0
+TISTAR.Layer0.Strip2.TimeWindow:            0.0
+
+TISTAR.Layer0.Strip3.Resolution.Offset:     0.0
+TISTAR.Layer0.Strip3.Resolution.Linear:     0.0
+TISTAR.Layer0.Strip3.Resolution.Quadratic:  0.0
+TISTAR.Layer0.Strip3.Resolution.Cubic:      0.0
+TISTAR.Layer0.Strip3.Threshold.keV:         0.0
+TISTAR.Layer0.Strip3.ThresholdWidth.keV:    0.0
+TISTAR.Layer0.Strip3.TimeWindow:            0.0
+
+TISTAR.Layer1.Strip0.Resolution.Offset:     0.0
+TISTAR.Layer1.Strip0.Resolution.Linear:     0.0
+TISTAR.Layer1.Strip0.Resolution.Quadratic:  0.0
+TISTAR.Layer1.Strip0.Resolution.Cubic:      0.0
+TISTAR.Layer1.Strip0.Threshold.keV:         0.0
+TISTAR.Layer1.Strip0.ThresholdWidth.keV:    0.0
+TISTAR.Layer1.Strip0.TimeWindow:            0.0
+                   
+TISTAR.Layer1.Strip1.Resolution.Offset:     0.0
+TISTAR.Layer1.Strip1.Resolution.Linear:     0.0
+TISTAR.Layer1.Strip1.Resolution.Quadratic:  0.0
+TISTAR.Layer1.Strip1.Resolution.Cubic:      0.0
+TISTAR.Layer1.Strip1.Threshold.keV:         0.0
+TISTAR.Layer1.Strip1.ThresholdWidth.keV:    0.0
+TISTAR.Layer1.Strip1.TimeWindow:            0.0
+
+TISTAR.Layer2.Strip0.Resolution.Offset:     0.0
+TISTAR.Layer2.Strip0.Resolution.Linear:     0.0
+TISTAR.Layer2.Strip0.Resolution.Quadratic:  0.0
+TISTAR.Layer2.Strip0.Resolution.Cubic:      0.0
+TISTAR.Layer2.Strip0.Threshold.keV:         0.0
+TISTAR.Layer2.Strip0.ThresholdWidth.keV:    0.0
+TISTAR.Layer2.Strip0.TimeWindow:            0.0
+                   
+TISTAR.Layer2.Strip1.Resolution.Offset:     0.0
+TISTAR.Layer2.Strip1.Resolution.Linear:     0.0
+TISTAR.Layer2.Strip1.Resolution.Quadratic:  0.0
+TISTAR.Layer2.Strip1.Resolution.Cubic:      0.0
+TISTAR.Layer2.Strip1.Threshold.keV:         0.0
+TISTAR.Layer2.Strip1.ThresholdWidth.keV:    0.0
+TISTAR.Layer2.Strip1.TimeWindow:            0.0
+
+Histogram.1D.TISTAR.NofBins:                10000.0
+Histogram.1D.TISTAR.RangeLow.keV:           0.0
+Histogram.1D.TISTAR.RangeHigh.keV:          10000.0
 
 

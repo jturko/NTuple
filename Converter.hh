@@ -177,7 +177,10 @@ private:
     std::vector<Detector>* fPacesDetector;
 
     // TI-STAR
-    std::vector<Detector>* fTISTARStrip;
+    std::vector<Detector>* fTISTARArray;
+    std::vector<Detector>* fTISTARLayer1;
+    std::vector<Detector>* fTISTARLayer2;
+    std::vector<Detector>* fTISTARLayer3;
     
     //histograms
     std::map<std::string,TList*> fHistograms;

@@ -653,8 +653,11 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fTree.Branch("PacesDetector",&fPacesDetector, fSettings->BufferSize());
 
     // TI-STAR
-    fTISTARStrip        = new std::vector<Detector>;
-    fTree.Branch("TISTARStrip",         &fTISTARStrip,      fSettings->BufferSize());     
+    fTISTARArray        = new std::vector<Detector>;
+    fTree.Branch("TISTARArray",         &fTISTARArray,      fSettings->BufferSize());     
+    fTree.Branch("TISTARLayer1",        &fTISTARLayer1,      fSettings->BufferSize());     
+    fTree.Branch("TISTARLayer2",        &fTISTARLayer2,      fSettings->BufferSize());     
+    fTree.Branch("TISTARLayer3",        &fTISTARLayer3,      fSettings->BufferSize());     
     
 }
 
@@ -823,6 +826,12 @@ bool Converter::Run() {
             for(size_t firstDet = 0; firstDet < fTestcanDetector->size(); ++firstDet) {
                 hist1D->Fill((fTestcanDetector->at(firstDet).DetectorId()));
             }
+            hist1D = Get1DHistogram("TISTARMultiplicity","Statistics");
+            hist1D->Fill(fTISTARArray->size());
+            hist1D = Get1DHistogram("TISTARHitPattern","Statistics");
+            for(size_t firstDet = 0; firstDet < fTISTARArray->size(); ++firstDet) {
+                hist1D->Fill((fTISTARArray->at(firstDet).DetectorId()));
+            }            
 
             // GRIFFIN Crystal
             FillHistDetector1DGamma(hist1D, fGriffinCrystal, "griffin_crystal_unsup_edep_cry", "Griffin1D");
@@ -1357,8 +1366,15 @@ bool Converter::Run() {
             FillHistDetector1DGammaNR(hist1D, fPacesArray, "paces_crystal_unsup_edep_sum_nr", "0RES_Paces1D");
 
             // TI-STAR
-            FillHistDetector1DGamma(hist1D, fTISTARStrip, "TISTAR_crystal_unsup_edep", "TISTAR1D");
-            FillHistDetector1DGammaNR(hist1D, fTISTARStrip, "TISTAR_crystal_unsup_edep_nr", "0RES_TISTAR1D");
+            FillHistDetector1DGamma(hist1D, fTISTARArray, "TISTAR_array_unsup_edep", "TISTAR1D");
+            FillHistDetector1DGammaNR(hist1D, fTISTARArray, "TISTAR_array_unsup_edep_nr", "0RES_TISTAR1D");
+            FillHistDetector1DGamma(hist1D, fTISTARLayer1, "TISTAR_layer1_unsup_edep", "TISTAR1D");
+            FillHistDetector1DGammaNR(hist1D, fTISTARLayer1, "TISTAR_layer1_unsup_edep_nr", "0RES_TISTAR1D");
+            FillHistDetector1DGamma(hist1D, fTISTARLayer2, "TISTAR_layer2_unsup_edep", "TISTAR1D");
+            FillHistDetector1DGammaNR(hist1D, fTISTARLayer2, "TISTAR_layer2_unsup_edep_nr", "0RES_TISTAR1D");
+            FillHistDetector1DGamma(hist1D, fTISTARLayer3, "TISTAR_layer3_unsup_edep", "TISTAR1D");
+            FillHistDetector1DGammaNR(hist1D, fTISTARLayer3, "TISTAR_layer3_unsup_edep_nr", "0RES_TISTAR1D");
+
 
             fGriffinCrystal->clear();
             fGriffinDetector->clear();
@@ -1394,7 +1410,10 @@ bool Converter::Run() {
             fPacesDetector->clear();
             fPacesArray->clear();
 
-            fTISTARStrip->clear();
+            fTISTARArray->clear();
+            fTISTARLayer1->clear();            
+            fTISTARLayer2->clear();            
+            fTISTARLayer3->clear();            
 
             eventNumber = fEventNumber;
             belowThreshold.clear();
@@ -1490,7 +1509,15 @@ bool Converter::Run() {
                         break;
                     
                     case 9500:
-                        fTISTARStrip->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        fTISTARArray->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                        switch(fDetNumber) {
+                            case 0: fTISTARLayer1->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                                    break;
+                            case 1: fTISTARLayer2->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                                    break;
+                            case 2: fTISTARLayer3->push_back(Detector(fEventNumber, fDetNumber, fCryNumber, fDepEnergy, smearedEnergy, TVector3(fPosx,fPosy,fPosz), fTime));
+                                    break;
+                        }
                         break;
 
                     default:
