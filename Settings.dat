@@ -739,6 +739,11 @@ Griffin.15.3.ThresholdWidth.keV:	0.00
 
 ### TI-STAR ###
 
+TISTAR.Layer0.StripWidthX:  0.1     # in mm
+TISTAR.Layer0.StripWidthY:  0.1     # in mm
+TISTAR.Layer1.StripWidthX:  0.1     # in mm
+TISTAR.Layer1.StripWidthY:  0.1     # in mm
+
 TISTAR.Layer0.Strip0.Resolution.Offset:     0.0
 TISTAR.Layer0.Strip0.Resolution.Linear:     0.0
 TISTAR.Layer0.Strip0.Resolution.Quadratic:  0.0
@@ -803,8 +808,8 @@ TISTAR.Layer2.Strip1.Threshold.keV:         0.0
 TISTAR.Layer2.Strip1.ThresholdWidth.keV:    0.0
 TISTAR.Layer2.Strip1.TimeWindow:            0.0
 
-Histogram.1D.TISTAR.NofBins:                10000.0
+Histogram.1D.TISTAR.NofBins:                50000.0
 Histogram.1D.TISTAR.RangeLow.keV:           0.0
-Histogram.1D.TISTAR.RangeHigh.keV:          10000.0
+Histogram.1D.TISTAR.RangeHigh.keV:          50000.0
 
 

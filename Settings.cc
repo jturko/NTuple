@@ -36,15 +36,16 @@ Settings::Settings(std::string fileName, int verbosityLevel) :
     fGriffinAddbackVectorCrystalFaceDistancemm = env.GetValue("GriffinAddbackVectorCrystalFaceDistancemm",110.0);
 
     // TI-STAR detector/run variables
-    fTSNtupleName =         env.GetValue("TSNtupleName","treeGen");
-    fTSBeamEnergy =         env.GetValue("TSBeamEnergy", 792.0); // in MeV
-    fTSGasTargetLength =    env.GetValue("TSGasTargetLength", 16.0); // in cm
-    fTSLengthX =            env.GetValue("TSLengthX", 100.0); // in mm
-    fTSLengthY =            env.GetValue("TSLengthY", 100.0); // in mm
-    fTSStripWidthX =        env.GetValue("TSStripWidthX", 0.1); // in mm
-    fTSStripWidthY =        env.GetValue("TSStripWidthY", 0.1); // in mm
-    fTSnStripsX =           static_cast<int>(fTSLengthX/fTSStripWidthX); std::cout<<"nStrips in x = "<<fTSnStripsX<<" ("<<fTSLengthX<<"/"<<fTSStripWidthX<<")"<<std::endl;
-    fTSnStripsY =           static_cast<int>(fTSLengthY/fTSStripWidthY); std::cout<<"nStrips in y = "<<fTSnStripsY<<" ("<<fTSLengthY<<"/"<<fTSStripWidthY<<")"<<std::endl;
+    // assuming 2 pixelated strips
+    fTISTARGenNtupleName =      env.GetValue("TISTAR.NtupleName","/treeGen");
+    fTISTARStripWidthX.resize(2); 
+    fTISTARStripWidthY.resize(2); 
+    fTISTARnStripsX.resize(2);
+    fTISTARnStripsY.resize(2);
+    fTISTARStripWidthX[0] =  env.GetValue("TISTAR.Layer0.StripWidthX", 0.1); // in mm
+    fTISTARStripWidthY[0] =  env.GetValue("TISTAR.Layer0.StripWidthY", 0.1); // in mm
+    fTISTARStripWidthX[1] =  env.GetValue("TISTAR.Layer1.StripWidthX", 0.1); // in mm
+    fTISTARStripWidthY[1] =  env.GetValue("TISTAR.Layer1.StripWidthY", 0.1); // in mm
 
     // Griffin
     fResolution[1000].resize(16);
@@ -365,14 +366,14 @@ Settings::Settings(std::string fileName, int verbosityLevel) :
     B = env.GetValue("Testcan.Resolution.B",0.10);     
     C = env.GetValue("Testcan.Resolution.C",0.02); 
     for(int i = 1; i <= 4; i++) {
-        fProtonCoeff[i-1] = env.GetValue(Form("Testcan.Proton.%d",i), 0.0); std::cout << "a" << i << " = " << fProtonCoeff[i-1] << " | ";
+        fProtonCoeff[i-1] = env.GetValue(Form("Testcan.Proton.%d",i), 0.0); //std::cout << "a" << i << " = " << fProtonCoeff[i-1] << " | ";
         fDeuteronCoeff[i-1] = env.GetValue(Form("Testcan.Deuteron.%d",i), 0.0);
         fCarbonCoeff[i-1] = env.GetValue(Form("Testcan.Carbon.%d",i), 0.0);
         fBeCoeff[i-1] = env.GetValue(Form("Testcan.Be.%d",i), 0.0);
         fBCoeff[i-1] = env.GetValue(Form("Testcan.B.%d",i), 0.0);
         fAlphaCoeff[i-1] = env.GetValue(Form("Testcan.Alpha.%d",i), 0.0);
     }    
-    std::cout << "A = " << A << " | B = " << B << " | C = " << C << " | carbon = " << fCarbonCoeff[0] << std::endl;
+    //std::cout << "A = " << A << " | B = " << B << " | C = " << C << " | carbon = " << fCarbonCoeff[0] << std::endl;
     //fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("%f*TMath::Sqrt(x)/(2.*TMath::Sqrt(2.*TMath::Log(2.)))", linear),0.,100000.));
     //fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("x*TMath::Sqrt(TMath::Power(%f,2)+TMath::Power(%f,2)/x+TMath::Power(%f/x,2))/2.*TMath::Sqrt(2.*TMath::Log(2.)",A,B,C,0.)0.,100000.));
     fResolution[8500][0].push_back(TF1("Testcan.Resolution",Form("x*TMath::Sqrt(TMath::Power(%f,2)+TMath::Power(%f,2)/x+TMath::Power(%f/x,2))",A,B,C),0.,20.)); // From N Desplan Thesis

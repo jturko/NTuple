@@ -14,6 +14,8 @@
 #include "ParticleMC.hh"
 #include "TRexSettings.hh"
 
+#include "Settings.hh"
+
 #ifndef PI
 #define PI                       (TMath::Pi())
 #endif
@@ -22,7 +24,7 @@ enum Direction { kForward, kBackward, kUndefined };
 
 class HitSim {
 public:
-  HitSim(TRexSettings* settings);
+  HitSim(Settings * settings);
  
   void Clear();
   void SetFirstDeltaE(ParticleMC& firstbarrel, Direction direction);
@@ -37,7 +39,8 @@ public:
   double GetPadEnergy();
 
 private:
-  TRexSettings* fSett;
+  Settings*     fSett;
+  TRexSettings* fTRexSett;
   TRandom* fRand;
   ParticleMC* fFirstDeltaE;
   ParticleMC* fSecondDeltaE;

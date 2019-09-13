@@ -41,6 +41,7 @@ LOADLIBES = \
 	Settings.o \
     Particle.o \
     ParticleMC.o \
+    HitSim.o \
 	$(NAME)Dictionary.o
 
 # -------------------- implicit rules --------------------
@@ -68,6 +69,7 @@ all:  $(NAME)
 
 DEPENDENCIES = \
 	Griffin.hh \
+    Particle.hh \
     RootLinkDef.h
 
 $(NAME)Dictionary.o: $(NAME)Dictionary.cc

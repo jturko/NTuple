@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "TF1.h"
+#include "TRexSettings.hh"
 
 class Settings {
 public:
@@ -17,8 +18,8 @@ public:
     }
 
     // TI-STAR ntuple name
-    std::string TSNTupleName() {
-        return fTSNtupleName;
+    std::string TISTARGenNtupleName() {
+        return fTISTARGenNtupleName;
     }
 
     int VerbosityLevel() {
@@ -142,7 +143,23 @@ public:
         if(scintIon < 0 || scintIon >= kMax) { std::cout << "error : scintIon outside of the enum range!" << std::endl; return -1.; }
         else return fQuenching[scintIon];
     }
+ 
+    void SetTRexSettings(TRexSettings * trex_settings) {
+        fTRexSettings = trex_settings;
+        for(int i=0; i<2; i++) {
+            fTISTARnStripsX[i] = static_cast<int>(fTRexSettings->GetLayerDimensionsX(i)/fTISTARStripWidthX[i]); 
+            fTISTARnStripsY[i] = static_cast<int>(fTRexSettings->GetLayerDimensionsY(i)/fTISTARStripWidthY[i]); 
+            std::cout<<"nStrips in strip "<< i<<"; x = "<<fTISTARnStripsX[i]<<" ("<<fTRexSettings->GetLayerDimensionsX(i)<<"/"<<fTISTARStripWidthX[i]<<")"<<std::endl;
+            std::cout<<"nStrips in strip "<< i<<"; y = "<<fTISTARnStripsY[i]<<" ("<<fTRexSettings->GetLayerDimensionsY(i)<<"/"<<fTISTARStripWidthY[i]<<")"<<std::endl;
+        }
+    }
+    TRexSettings * GetTRexSettings() { return fTRexSettings; }
     
+    double GetTISTARnStripsX(int stripN) { return fTISTARnStripsX[stripN]; }
+    double GetTISTARnStripsY(int stripN) { return fTISTARnStripsY[stripN]; }
+    double GetTISTARStripWidthX(int stripN) { return fTISTARStripWidthX[stripN]; }
+    double GetTISTARStripWidthY(int stripN) { return fTISTARStripWidthY[stripN]; }
+
     //double ProtonCoeff(int i) { return fProtonCoeff[i]; }
     //double DeuteronCoeff(int i) { return fDeuteronCoeff[i]; }
     //double CarbonCoeff(int i) { return fCarbonCoeff[i]; }
@@ -159,7 +176,6 @@ public:
 
 private:
     std::string fNtupleName;
-    std::string fTSNtupleName;
 
     int fVerbosityLevel;
     int fBufferSize;
@@ -195,27 +211,16 @@ private:
     std::vector<double> fAlphaCoeff;
     
     // for TI-STAR
-    // variable for the run
-    double  fTSBeamEnergy;
-    double  fTSGasTargetLength;
-    int     fTSnStripsX;
-    int     fTSnStripsY;
-    double  fTSLengthX;
-    double  fTSLengthY;
-    double  fTSStripWidthX;
-    double  fTSStripWidthY;
+    // simulation variables such as the strip dims, target length, 
+    // and beam energy are stored in the fTRexSettings object
+    std::string fTISTARGenNtupleName;
+    std::vector<int> fTISTARnStripsX;
+    std::vector<int> fTISTARnStripsY;
+    std::vector<double>  fTISTARStripWidthX;
+    std::vector<double>  fTISTARStripWidthY;
     
-    // from the generator tree
-    double fTSGenReactionBeamEnergy;
-    double fTSGenReactionBeamEnergyCM;
-    double fTSGenReactionX;
-    double fTSGenReactionY;
-    double fTSGenReactionZ;
-    double fTSGenRecoilTheta;
-    double fTSGenRecoilPhi;
-    double fTSGenRecoilEnergy;
-    int    fTSGenReactionSim;
-    
+    TRexSettings * fTRexSettings;
+
 };
 
 #endif

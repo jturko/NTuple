@@ -17,6 +17,8 @@
 #include "Settings.hh"
 #include "Griffin.hh"
 
+#include "Particle.hh"
+
 class Converter {
 public:
     Converter(std::vector<std::string>&, const std::string&, Settings*);
@@ -87,8 +89,6 @@ private:
     TFile* fOutput;
     TTree fTree;
     TRandom3 fRandom;
-    
-    TChain fTSChain; // TI-STAR generator tree chain
 
     Int_t LaBrGriffinNeighbours_det[8][3];
     Int_t LaBrGriffinNeighbours_cry[8][3];
@@ -184,6 +184,23 @@ private:
     
     //histograms
     std::map<std::string,TList*> fHistograms;
+    
+    // from the TRex-derived generator tree for TI-STAR
+    TChain fTISTARGenChain; 
+    
+    Double_t fTISTARGenReactionBeamEnergy;
+    Double_t fTISTARGenReactionBeamEnergyCM;
+    Double_t fTISTARGenReactionX;
+    Double_t fTISTARGenReactionY;
+    Double_t fTISTARGenReactionZ;
+    Double_t fTISTARGenRecoilTheta;
+    Double_t fTISTARGenRecoilPhi;
+    Double_t fTISTARGenRecoilEnergy;
+    Int_t    fTISTARGenReaction;
+
+    std::vector<Particle> * fTISTARParticleVector;
+    
+
 };
 
 #endif

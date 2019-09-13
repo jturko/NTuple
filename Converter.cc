@@ -12,7 +12,7 @@
 
 Converter::Converter(std::vector<std::string>& inputFileNames, const std::string& outputFileName, Settings* settings)
     : fSettings(settings) {
-    TRexSettings * sett = NULL;
+    TRexSettings * trex_settings = NULL;
     //create TChain to read in all input files
     for(auto fileName = inputFileNames.begin(); fileName != inputFileNames.end(); ++fileName) {
         if(!FileExists(*fileName)) {
@@ -20,12 +20,18 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
             continue;
         }
         //add sub-directory and tree name to file name
-        fileName->append(fSettings->NtupleName());
-        fChain.Add(fileName->c_str());
+        //fileName->append(fSettings->NtupleName());
+        //fChain.Add(fileName->c_str());
+        std::string ntuple_name = *fileName + fSettings->NtupleName();
+        fChain.Add(ntuple_name.c_str());
+        std::string generator_ntuple_name = *fileName + fSettings->TISTARGenNtupleName();
+        fTISTARGenChain.Add(generator_ntuple_name.c_str());
+
         fRandom.SetSeed(1);
-        if(!sett) {
-            sett = static_cast<TRexSettings*>(fChain.GetFile()->Get("settings"));
-            sett->Print();
+        if(!trex_settings) {
+            trex_settings = static_cast<TRexSettings*>(fChain.GetFile()->Get("settings"));
+            trex_settings->Print();
+            settings->SetTRexSettings(trex_settings);
         }
     }
 
@@ -572,6 +578,17 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fChain.SetBranchAddress("posz", &fPosz);
     fChain.SetBranchAddress("time", &fTime);
 
+    // add branches from the TRex derived generators
+    fTISTARGenChain.SetBranchAddress("reactionEnergy",      &fTISTARGenReactionBeamEnergy);
+    fTISTARGenChain.SetBranchAddress("reactionEnergyCM",    &fTISTARGenReactionBeamEnergyCM);
+    fTISTARGenChain.SetBranchAddress("reactionX",           &fTISTARGenReactionX);
+    fTISTARGenChain.SetBranchAddress("reactionY",           &fTISTARGenReactionY);
+    fTISTARGenChain.SetBranchAddress("reactionZ",           &fTISTARGenReactionZ);
+    fTISTARGenChain.SetBranchAddress("recoilTheta",         &fTISTARGenRecoilTheta);
+    fTISTARGenChain.SetBranchAddress("recoilPhi",           &fTISTARGenRecoilPhi);
+    fTISTARGenChain.SetBranchAddress("recoilEnergy",        &fTISTARGenRecoilEnergy);
+    fTISTARGenChain.SetBranchAddress("reaction",            &fTISTARGenReaction);
+
     //create output file
     fOutput = new TFile(outputFileName.c_str(),"recreate");
     if(!fOutput->IsOpen()) {
@@ -659,6 +676,9 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fTree.Branch("TISTARLayer2",        &fTISTARLayer2,      fSettings->BufferSize());     
     fTree.Branch("TISTARLayer3",        &fTISTARLayer3,      fSettings->BufferSize());     
     
+    fTISTARParticleVector = new std::vector<Particle>;
+    fTree.Branch("TISTARParticleVector", &fTISTARParticleVector, fSettings->BufferSize());
+
 }
 
 Converter::~Converter() {

@@ -4,6 +4,8 @@
 #pragma link off all functions;
 #pragma link C++ class Detector+;
 #pragma link C++ class vector<Detector>+;
+#pragma link C++ class Particle+;
+#pragma link C++ class vector<Particle>+;
 //#pragma link C++ class GriffinDetector+;
 //#pragma link C++ class vector<GriffinDetector>+;
 //#pragma link C++ class GriffinBgo+;
