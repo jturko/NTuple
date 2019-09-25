@@ -12,7 +12,7 @@
 #include "TFile.h"
 
 #include "ParticleMC.hh"
-#include "TRexSettings.hh"
+#include "TistarSettings.hh"
 
 #include "Settings.hh"
 
@@ -40,7 +40,7 @@ public:
 
 private:
   Settings*     fSett;
-  TRexSettings* fTRexSett;
+  TistarSettings* fTRexSett;
   TRandom* fRand;
   ParticleMC* fFirstDeltaE;
   ParticleMC* fSecondDeltaE;

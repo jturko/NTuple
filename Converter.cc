@@ -8,11 +8,12 @@
 #include "Utilities.hh"
 #include "LightYield.hh"
 
-#include "TRexSettings.hh"
+#include "TistarSettings.hh"
+#include "HitSim.hh"
 
 Converter::Converter(std::vector<std::string>& inputFileNames, const std::string& outputFileName, Settings* settings)
     : fSettings(settings) {
-    TRexSettings * trex_settings = NULL;
+    TistarSettings * trex_settings = NULL;
     //create TChain to read in all input files
     for(auto fileName = inputFileNames.begin(); fileName != inputFileNames.end(); ++fileName) {
         if(!FileExists(*fileName)) {
@@ -29,9 +30,9 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
 
         fRandom.SetSeed(1);
         if(!trex_settings) {
-            trex_settings = static_cast<TRexSettings*>(fChain.GetFile()->Get("settings"));
+            trex_settings = static_cast<TistarSettings*>(fChain.GetFile()->Get("settings"));
             trex_settings->Print();
-            settings->SetTRexSettings(trex_settings);
+            fSettings->SetTistarSettings(trex_settings);
         }
     }
 
@@ -732,7 +733,7 @@ bool Converter::Run() {
     THnSparseF* histND = NULL;
     long int nEntries = fChain.GetEntries();
 
-
+    HitSim * hit = new HitSim(fSettings);
 
     //  const char* charbuffer;
     //  std::string stringbuffer;

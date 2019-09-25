@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "TF1.h"
-#include "TRexSettings.hh"
+#include "TistarSettings.hh"
 
 class Settings {
 public:
@@ -144,16 +144,16 @@ public:
         else return fQuenching[scintIon];
     }
  
-    void SetTRexSettings(TRexSettings * trex_settings) {
-        fTRexSettings = trex_settings;
+    void SetTistarSettings(TistarSettings * trex_settings) {
+        fTistarSettings = trex_settings;
         for(int i=0; i<2; i++) {
-            fTISTARnStripsX[i] = static_cast<int>(fTRexSettings->GetLayerDimensionsX(i)/fTISTARStripWidthX[i]); 
-            fTISTARnStripsY[i] = static_cast<int>(fTRexSettings->GetLayerDimensionsY(i)/fTISTARStripWidthY[i]); 
-            std::cout<<"nStrips in strip "<< i<<"; x = "<<fTISTARnStripsX[i]<<" ("<<fTRexSettings->GetLayerDimensionsX(i)<<"/"<<fTISTARStripWidthX[i]<<")"<<std::endl;
-            std::cout<<"nStrips in strip "<< i<<"; y = "<<fTISTARnStripsY[i]<<" ("<<fTRexSettings->GetLayerDimensionsY(i)<<"/"<<fTISTARStripWidthY[i]<<")"<<std::endl;
+            fTISTARnStripsX[i] = static_cast<int>(fTistarSettings->GetLayerDimensionsX(i)/fTISTARStripWidthX[i]); 
+            fTISTARnStripsY[i] = static_cast<int>(fTistarSettings->GetLayerDimensionsY(i)/fTISTARStripWidthY[i]); 
+            std::cout<<"nStrips in strip "<< i<<"; x = "<<fTISTARnStripsX[i]<<" ("<<fTistarSettings->GetLayerDimensionsX(i)<<"/"<<fTISTARStripWidthX[i]<<")"<<std::endl;
+            std::cout<<"nStrips in strip "<< i<<"; y = "<<fTISTARnStripsY[i]<<" ("<<fTistarSettings->GetLayerDimensionsY(i)<<"/"<<fTISTARStripWidthY[i]<<")"<<std::endl;
         }
     }
-    TRexSettings * GetTRexSettings() { return fTRexSettings; }
+    TistarSettings * GetTistarSettings() { return fTistarSettings; }
     
     double GetTISTARnStripsX(int stripN) { return fTISTARnStripsX[stripN]; }
     double GetTISTARnStripsY(int stripN) { return fTISTARnStripsY[stripN]; }
@@ -212,14 +212,14 @@ private:
     
     // for TI-STAR
     // simulation variables such as the strip dims, target length, 
-    // and beam energy are stored in the fTRexSettings object
+    // and beam energy are stored in the fTistarSettings object
     std::string fTISTARGenNtupleName;
     std::vector<int> fTISTARnStripsX;
     std::vector<int> fTISTARnStripsY;
     std::vector<double>  fTISTARStripWidthX;
     std::vector<double>  fTISTARStripWidthY;
     
-    TRexSettings * fTRexSettings;
+    TistarSettings * fTistarSettings;
 
 };
 

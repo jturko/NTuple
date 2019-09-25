@@ -2,7 +2,7 @@
 
 HitSim::HitSim(Settings* setting) {
 	fSett = setting;
-    fTRexSett = fSett->GetTRexSettings();
+    fTRexSett = fSett->GetTistarSettings();
 	fRand = new TRandom();
 	Clear();
 } // end constructor
