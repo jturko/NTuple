@@ -94,10 +94,10 @@ TVector3 HitSim::FirstPosition(bool doubleSidedFirstLayer, bool smear) {
 
 	    // strip 0 closest to target
 	    if(fFirstDirection == kForward) {//std::cout<<" \n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 1. layer quadr forward: "<< quadr << std::endl;
-	      z = fTRexSett->GetLayerPositionZ(0)[quadr] - fTRexSett->GetLayerDimensionsY(0)/2. + strip*fSett->GetTISTARStripWidthY(0);
+	      z = fTRexSett->GetLayerPositionVector()[0][quadr].z() - fTRexSett->GetLayerDimensionVector()[0][0].y()/2. + strip*fSett->GetTISTARStripWidthY(0);
 	    } else { // backward
 			//std::cout<<" \n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 1. layer quadr backward: "<< quadr << std::endl;
-	      z = fTRexSett->GetLayerPositionZ(0)[quadr+2] + fTRexSett->GetLayerDimensionsY(0)/2. - strip*fSett->GetTISTARStripWidthY(0);
+	      z = fTRexSett->GetLayerPositionVector()[0][quadr].z() + fTRexSett->GetLayerDimensionVector()[0][0].y()/2. - strip*fSett->GetTISTARStripWidthY(0);
 	    }
 	    //quadr   0 top   1 lef   2 bot   3 rig
 	    //x       +pos    +dtb    -pos    -dtb
@@ -105,31 +105,31 @@ TVector3 HitSim::FirstPosition(bool doubleSidedFirstLayer, bool smear) {
 	    
 	    switch(quadr) {
 	    case 0:
-	      x = fSecondPosition.X()*fTRexSett->GetLayerDistToBeam(0)[quadr]/fTRexSett->GetLayerDistToBeam(1)[quadr];
-	      y = fTRexSett->GetLayerDistToBeam(0)[quadr];
+	      x = fSecondPosition.X()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();
+	      y = fTRexSett->GetLayerPositionVector()[0][quadr].x();
 	      break; 
 	      
 	      // exchange case1 and case 2 because it is not any more box shape, just top (0) and bottom (0) Leila 
 	      
 	    case 1:
-	      /*x = fTRexSett->GetLayerDistToBeam(0)[quadr];
-	      y = fSecondPosition.Y()*fTRexSett->GetLayerDistToBeam(0)[quadr]/fTRexSett->GetLayerDistToBeam(1)[quadr]; original*/
+	      /*x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
+	      y = fSecondPosition.Y()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x(); original*/
 	      
-	      x = fSecondPosition.X()*fTRexSett->GetLayerDistToBeam(0)[quadr]/fTRexSett->GetLayerDistToBeam(1)[quadr];
-	      y = -fTRexSett->GetLayerDistToBeam(0)[quadr]; // changed by Leila	      	      
+	      x = fSecondPosition.X()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();
+	      y = -fTRexSett->GetLayerPositionVector()[0][quadr].x(); // changed by Leila	      	      
 	      break;
 	      
 	    case 2:
-	      /*x = fSecondPosition.X()*fTRexSett->GetLayerDistToBeam(0)[quadr]/fTRexSett->GetLayerDistToBeam(1)[quadr];
-	      y = -fTRexSett->GetLayerDistToBeam(0)[quadr]; original */
+	      /*x = fSecondPosition.X()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();
+	      y = -fTRexSett->GetLayerPositionVector()[0][quadr].x(); original */
 	      
-	      x = fTRexSett->GetLayerDistToBeam(0)[quadr];
-	      y = fSecondPosition.Y()*fTRexSett->GetLayerDistToBeam(0)[quadr]/fTRexSett->GetLayerDistToBeam(1)[quadr];// changed by Leila
+	      x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
+	      y = fSecondPosition.Y()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();// changed by Leila
 	      break;
 	      
 	    case 3:
-	      x = -fTRexSett->GetLayerDistToBeam(0)[quadr];
-	      y = fSecondPosition.Y()*fTRexSett->GetLayerDistToBeam(0)[quadr]/fTRexSett->GetLayerDistToBeam(1)[quadr];
+	      x = -fTRexSett->GetLayerPositionVector()[0][quadr].x();
+	      y = fSecondPosition.Y()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();
 	      break;
 	      
 	    default:
@@ -168,10 +168,10 @@ TVector3 HitSim::FirstPosition(bool doubleSidedFirstLayer, bool smear) {
 
 		 // strip 0 closest to target
 		 if(fFirstDirection == kForward) {
-			 z = fTRexSett->GetLayerPositionZ(0)[quadr] - fTRexSett->GetLayerDimensionsY(0)/2. + strip*fSett->GetTISTARStripWidthY(0);
+			 z = fTRexSett->GetLayerPositionVector()[0][quadr].z() - fTRexSett->GetLayerDimensionVector()[0][0].y()/2. + strip*fSett->GetTISTARStripWidthY(0);
 			 
             //change strip # so that the range isn't 0 - (n-1), but -n/2 - n/2
-			 ring -= fTRexSett->GetLayerDimensionsX(0)/fSett->GetTISTARStripWidthX(0)/2.;
+			 ring -= fTRexSett->GetLayerDimensionVector()[0][quadr].x()/fSett->GetTISTARStripWidthZ(0)/2.;
 
 			 //quadr   0 top   1 lef   2 bot   3 rig
 			 //x       +pos    +dtb    -pos    -dtb
@@ -181,62 +181,62 @@ TVector3 HitSim::FirstPosition(bool doubleSidedFirstLayer, bool smear) {
 
 			 switch(quadr) {
 				 case 0:
-					 x = -ring*fSett->GetTISTARStripWidthX(0);
-					 y = fTRexSett->GetLayerDistToBeam(0)[quadr];
+					 x = -ring*fSett->GetTISTARStripWidthZ(0);
+					 y = fTRexSett->GetLayerPositionVector()[0][quadr].x();
 					 break;
 					 
 				 case 1:
-					 /*x = fTRexSett->GetLayerDistToBeam(0)[quadr];
+					 /*x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
 					 y = ring*fTRexSett->GetFBarrelDeltaESingleStripWidth(); original */
 					 
-					 x = ring*fSett->GetTISTARStripWidthX(0);
-					 y = -fTRexSett->GetLayerDistToBeam(0)[quadr];
+					 x = ring*fSett->GetTISTARStripWidthZ(0);
+					 y = -fTRexSett->GetLayerPositionVector()[0][quadr].x();
 					 break;
 					 
 				 case 2:
 					 /*x = ring*fTRexSett->GetFBarrelDeltaESingleStripWidth();
-					 y = -fTRexSett->GetLayerDistToBeam(0)[quadr]; original */
+					 y = -fTRexSett->GetLayerPositionVector()[0][quadr].x(); original */
 					 
-					 x = fTRexSett->GetLayerDistToBeam(0)[quadr];
-					 y = ring*fSett->GetTISTARStripWidthX(0);
+					 x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
+					 y = ring*fSett->GetTISTARStripWidthZ(0);
 					 break;
 					 
 				 case 3:
-					 x = -fTRexSett->GetLayerDistToBeam(0)[quadr];
-					 y = -ring*fSett->GetTISTARStripWidthX(0);
+					 x = -fTRexSett->GetLayerPositionVector()[0][quadr].x();
+					 y = -ring*fSett->GetTISTARStripWidthZ(0);
 					 break;
 				 default:
 					 break;
 			 }
 		 } else { // backward
-			 z = fTRexSett->GetLayerPositionZ(0)[quadr+2] + fTRexSett->GetLayerDimensionsY(0)/2. - strip*fSett->GetTISTARStripWidthY(0);
+			 z = fTRexSett->GetLayerPositionVector()[0][quadr].z() + fTRexSett->GetLayerDimensionVector()[0][0].y()/2. - strip*fSett->GetTISTARStripWidthY(0);
 			 //change ring # so that the range isn't 0 - (n-1), but -n/2 - n/2
-			 ring -= fTRexSett->GetLayerDimensionsX(0)/fSett->GetTISTARStripWidthX(0)/2.;
+			 ring -= fTRexSett->GetLayerDimensionVector()[0][quadr].x()/fSett->GetTISTARStripWidthZ(0)/2.;
 
 
 			 switch(quadr) {
 				 case 0:
-					 x = -ring*fSett->GetTISTARStripWidthX(0);
-					 y = fTRexSett->GetLayerDistToBeam(0)[quadr+2];
+					 x = -ring*fSett->GetTISTARStripWidthZ(0);
+					 y = fTRexSett->GetLayerPositionVector()[0][quadr].x();
 					 break;
 				 case 1:
-					 /*x = fTRexSett->GetLayerDistToBeam(0)[quadr+2];
+					 /*x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
 					 y = ring*fTRexSett->GetBBarrelDeltaESingleStripWidth(); original */
 					 
-					 x = ring*fSett->GetTISTARStripWidthX(0);
-					 y = -fTRexSett->GetLayerDistToBeam(0)[quadr+2]; // changed by Leila
+					 x = ring*fSett->GetTISTARStripWidthZ(0);
+					 y = -fTRexSett->GetLayerPositionVector()[0][quadr].x(); // changed by Leila
 					 break;
 					 
 				 case 2:
 					 /*x = ring*fTRexSett->GetBBarrelDeltaESingleStripWidth();
-					 y = -fTRexSett->GetLayerDistToBeam(0)[quadr+2]; original */
+					 y = -fTRexSett->GetLayerPositionVector()[0][quadr].x(); original */
 					 
-					 x = fTRexSett->GetLayerDistToBeam(0)[quadr+2];
-					 y = ring*fSett->GetTISTARStripWidthX(0); // changed by Leila
+					 x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
+					 y = ring*fSett->GetTISTARStripWidthZ(0); // changed by Leila
 					 break;
 				 case 3:
-					 x = -fTRexSett->GetLayerDistToBeam(0)[quadr+2];
-					 y = -ring*fSett->GetTISTARStripWidthX(0);
+					 x = -fTRexSett->GetLayerPositionVector()[0][quadr].x();
+					 y = -ring*fSett->GetTISTARStripWidthZ(0);
 					 break;
 				 default:
 					 break;
@@ -326,9 +326,9 @@ TVector3 HitSim::SecondPosition(bool smear) {
 
 	// strip 0 closest to target
 	if(fSecondDirection == kForward) {//std::cout<<" \n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 2. layer strips/rings quadr forward: "<< quadr << std::endl;
-		z = fTRexSett->GetLayerPositionZ(1)[quadr] - fTRexSett->GetLayerDimensionsY(1)/2. + strip*fSett->GetTISTARStripWidthY(1);
+		z = fTRexSett->GetLayerPositionVector()[1][quadr].z() - fTRexSett->GetLayerDimensionVector()[1][0].y()/2. + strip*fSett->GetTISTARStripWidthY(1);
 		//change ring # so that the range isn't 0 - (n-1), but -n/2 - n/2
-		ring -= fTRexSett->GetLayerDimensionsX(1)/fSett->GetTISTARStripWidthX(1)/2.;
+		ring -= fTRexSett->GetLayerDimensionVector()[1][0].z()/fSett->GetTISTARStripWidthZ(1)/2.;
 
 		//quadr   0 top   1 lef   2 bot   3 rig
 		//x       +pos    +dtb    -pos    -dtb
@@ -338,64 +338,64 @@ TVector3 HitSim::SecondPosition(bool smear) {
 
 		switch(quadr) {
 			case 0:
-				x = -ring*fSett->GetTISTARStripWidthX(1); // why negative????
-				y = fTRexSett->GetLayerDistToBeam(1)[quadr];
+				x = -ring*fSett->GetTISTARStripWidthZ(1); // why negative????
+				y = fTRexSett->GetLayerPositionVector()[1][quadr].x();
 				break;
 				
 			case 1:
-				/*x = fTRexSett->GetLayerDistToBeam(1)[quadr];
+				/*x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
 				y = ring*fTRexSett->GetSecondFBarrelDeltaESingleStripWidth(); original */
 				
-				x = ring*fSett->GetTISTARStripWidthX(1);
-				y = -fTRexSett->GetLayerDistToBeam(1)[quadr]; // changed by Leila
+				x = ring*fSett->GetTISTARStripWidthZ(1);
+				y = -fTRexSett->GetLayerPositionVector()[1][quadr].x(); // changed by Leila
 				break;
 				
 			case 2:
 				/*x = ring*fTRexSett->GetSecondFBarrelDeltaESingleStripWidth();
-				y = -fTRexSett->GetLayerDistToBeam(1)[quadr]; original*/
+				y = -fTRexSett->GetLayerPositionVector()[1][quadr].x(); original*/
 				
-				x = fTRexSett->GetLayerDistToBeam(1)[quadr];
-				y = ring*fSett->GetTISTARStripWidthX(1); // changed by Leila
+				x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
+				y = ring*fSett->GetTISTARStripWidthZ(1); // changed by Leila
 				break;
 				
 			case 3:
-				x = -fTRexSett->GetLayerDistToBeam(1)[quadr];
-				y = -ring*fSett->GetTISTARStripWidthX(1);
+				x = -fTRexSett->GetLayerPositionVector()[1][quadr].x();
+				y = -ring*fSett->GetTISTARStripWidthZ(1);
 				break;
 			default:
 				break;
 		}
 	} else { // backward
 		//std::cout<<" \n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 2. layer strips/rings quadr backward: "<< quadr << std::endl;
-		z = fTRexSett->GetLayerPositionZ(0)[quadr+2] + fTRexSett->GetLayerDimensionsY(1)/2. - strip*fSett->GetTISTARStripWidthY(1);
+		z = fTRexSett->GetLayerPositionVector()[0][quadr].z() + fTRexSett->GetLayerDimensionVector()[1][0].y()/2. - strip*fSett->GetTISTARStripWidthY(1);
 		//change ring # so that the range isn't 0 - (n-1), but -n/2 - n/2
-		ring -= fTRexSett->GetLayerDimensionsX(1)/fSett->GetTISTARStripWidthX(1)/2.;
+		ring -= fTRexSett->GetLayerDimensionVector()[1][0].z()/fSett->GetTISTARStripWidthZ(1)/2.;
 
 
 		switch(quadr) {
 			case 0:
-				x = -ring*fSett->GetTISTARStripWidthX(1);
-				y = fTRexSett->GetLayerDistToBeam(1)[quadr];
+				x = -ring*fSett->GetTISTARStripWidthZ(1);
+				y = fTRexSett->GetLayerPositionVector()[1][quadr].x();
 				break;
 				
 			case 1:
-				/*x = fTRexSett->GetLayerDistToBeam(1)[quadr];
+				/*x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
 				y = ring*fTRexSett->GetSecondBBarrelDeltaESingleStripWidth(); original */
 				
-				x = ring*fSett->GetTISTARStripWidthX(1);
-				y = -fTRexSett->GetLayerDistToBeam(1)[quadr]; // changed by Leila
+				x = ring*fSett->GetTISTARStripWidthZ(1);
+				y = -fTRexSett->GetLayerPositionVector()[1][quadr].x(); // changed by Leila
 				break;
 			case 2:
 				/*x = ring*fTRexSett->GetSecondBBarrelDeltaESingleStripWidth();
-				y = -fTRexSett->GetLayerDistToBeam(1)[quadr]; original */ 
+				y = -fTRexSett->GetLayerPositionVector()[1][quadr].x(); original */ 
 				
-				x = fTRexSett->GetLayerDistToBeam(1)[quadr];
-				y = ring*fSett->GetTISTARStripWidthX(1); // changed by Leila
+				x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
+				y = ring*fSett->GetTISTARStripWidthZ(1); // changed by Leila
 				break;
 				
 			case 3:
-				x = -fTRexSett->GetLayerDistToBeam(1)[quadr];
-				y = -ring*fSett->GetTISTARStripWidthX(1);
+				x = -fTRexSett->GetLayerPositionVector()[1][quadr].x();
+				y = -ring*fSett->GetTISTARStripWidthZ(1);
 				break;
 			default:
 				break;

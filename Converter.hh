@@ -18,6 +18,7 @@
 #include "Griffin.hh"
 
 #include "Particle.hh"
+#include "ParticleMC.hh"
 
 class Converter {
 public:
@@ -60,6 +61,10 @@ private:
     // Paces
     void CheckPacesDetectorAddback();
     void AddbackPaces();
+    
+    // TI-STAR
+    int CalculateStripNumber(int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim);
+    int CalculateRingNumber (int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim);
 
     void PrintStatistics();
 
@@ -197,8 +202,14 @@ private:
     Double_t fTISTARGenRecoilPhi;
     Double_t fTISTARGenRecoilEnergy;
     Int_t    fTISTARGenReaction;
-
+    
     std::vector<Particle> * fTISTARParticleVector;
+
+    TChain fTISTARDetChain;
+    std::vector<ParticleMC>* fTISTARFirstDeltaE[4];
+    std::vector<ParticleMC>* fTISTARSecondDeltaE[2];
+    std::vector<ParticleMC>* fTISTARPad[2];
+
     
 
 };

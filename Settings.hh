@@ -21,6 +21,10 @@ public:
     std::string TISTARGenNtupleName() {
         return fTISTARGenNtupleName;
     }
+    
+    std::string TISTARDetNtupleName() {
+        return fTISTARDetNtupleName;
+    }
 
     int VerbosityLevel() {
         return fVerbosityLevel;
@@ -147,18 +151,18 @@ public:
     void SetTistarSettings(TistarSettings * trex_settings) {
         fTistarSettings = trex_settings;
         for(int i=0; i<2; i++) {
-            fTISTARnStripsX[i] = static_cast<int>(fTistarSettings->GetLayerDimensionsX(i)/fTISTARStripWidthX[i]); 
-            fTISTARnStripsY[i] = static_cast<int>(fTistarSettings->GetLayerDimensionsY(i)/fTISTARStripWidthY[i]); 
-            std::cout<<"nStrips in strip "<< i<<"; x = "<<fTISTARnStripsX[i]<<" ("<<fTistarSettings->GetLayerDimensionsX(i)<<"/"<<fTISTARStripWidthX[i]<<")"<<std::endl;
-            std::cout<<"nStrips in strip "<< i<<"; y = "<<fTISTARnStripsY[i]<<" ("<<fTistarSettings->GetLayerDimensionsY(i)<<"/"<<fTISTARStripWidthY[i]<<")"<<std::endl;
+            fTISTARnStripsY[i] = static_cast<int>(fTistarSettings->GetLayerDimensionVector()[i][0].y()/fTISTARStripWidthY[i]); 
+            fTISTARnStripsZ[i] = static_cast<int>(fTistarSettings->GetLayerDimensionVector()[i][0].z()/fTISTARStripWidthZ[i]); 
+            std::cout<<"nStrips in strip "<< i<<"; y = "<<fTISTARnStripsY[i]<<" ("<<fTistarSettings->GetLayerDimensionVector()[i][0].y()<<"/"<<fTISTARStripWidthY[i]<<")"<<std::endl;
+            std::cout<<"nStrips in strip "<< i<<"; z = "<<fTISTARnStripsZ[i]<<" ("<<fTistarSettings->GetLayerDimensionVector()[i][0].z()<<"/"<<fTISTARStripWidthZ[i]<<")"<<std::endl;
         }
     }
     TistarSettings * GetTistarSettings() { return fTistarSettings; }
     
-    double GetTISTARnStripsX(int stripN) { return fTISTARnStripsX[stripN]; }
     double GetTISTARnStripsY(int stripN) { return fTISTARnStripsY[stripN]; }
-    double GetTISTARStripWidthX(int stripN) { return fTISTARStripWidthX[stripN]; }
+    double GetTISTARnStripsZ(int stripN) { return fTISTARnStripsZ[stripN]; }
     double GetTISTARStripWidthY(int stripN) { return fTISTARStripWidthY[stripN]; }
+    double GetTISTARStripWidthZ(int stripN) { return fTISTARStripWidthZ[stripN]; }
 
     //double ProtonCoeff(int i) { return fProtonCoeff[i]; }
     //double DeuteronCoeff(int i) { return fDeuteronCoeff[i]; }
@@ -214,11 +218,12 @@ private:
     // simulation variables such as the strip dims, target length, 
     // and beam energy are stored in the fTistarSettings object
     std::string fTISTARGenNtupleName;
-    std::vector<int> fTISTARnStripsX;
     std::vector<int> fTISTARnStripsY;
-    std::vector<double>  fTISTARStripWidthX;
+    std::vector<int> fTISTARnStripsZ;
     std::vector<double>  fTISTARStripWidthY;
+    std::vector<double>  fTISTARStripWidthZ;
     
+    std::string fTISTARDetNtupleName;
     TistarSettings * fTistarSettings;
 
 };

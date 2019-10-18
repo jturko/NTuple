@@ -37,15 +37,17 @@ Settings::Settings(std::string fileName, int verbosityLevel) :
 
     // TI-STAR detector/run variables
     // assuming 2 pixelated strips
-    fTISTARGenNtupleName =      env.GetValue("TISTAR.NtupleName","/treeGen");
-    fTISTARStripWidthX.resize(2); 
+    fTISTARGenNtupleName =      env.GetValue("TISTAR.GenNtupleName","/treeGen");
     fTISTARStripWidthY.resize(2); 
-    fTISTARnStripsX.resize(2);
+    fTISTARStripWidthZ.resize(2); 
     fTISTARnStripsY.resize(2);
-    fTISTARStripWidthX[0] =  env.GetValue("TISTAR.Layer0.StripWidthX", 0.1); // in mm
+    fTISTARnStripsZ.resize(2);
     fTISTARStripWidthY[0] =  env.GetValue("TISTAR.Layer0.StripWidthY", 0.1); // in mm
-    fTISTARStripWidthX[1] =  env.GetValue("TISTAR.Layer1.StripWidthX", 0.1); // in mm
+    fTISTARStripWidthZ[0] =  env.GetValue("TISTAR.Layer0.StripWidthZ", 0.1); // in mm
     fTISTARStripWidthY[1] =  env.GetValue("TISTAR.Layer1.StripWidthY", 0.1); // in mm
+    fTISTARStripWidthZ[1] =  env.GetValue("TISTAR.Layer1.StripWidthZ", 0.1); // in mm
+    
+    fTISTARDetNtupleName =      env.GetValue("TISTAR.DetNtupleName","/treeDet");
 
     // Griffin
     fResolution[1000].resize(16);

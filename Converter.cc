@@ -25,8 +25,12 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
         //fChain.Add(fileName->c_str());
         std::string ntuple_name = *fileName + fSettings->NtupleName();
         fChain.Add(ntuple_name.c_str());
+        
         std::string generator_ntuple_name = *fileName + fSettings->TISTARGenNtupleName();
         fTISTARGenChain.Add(generator_ntuple_name.c_str());
+
+        std::string detector_ntuple_name = *fileName + fSettings->TISTARDetNtupleName();
+        fTISTARDetChain.Add(detector_ntuple_name.c_str());
 
         fRandom.SetSeed(1);
         if(!trex_settings) {
@@ -580,6 +584,7 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fChain.SetBranchAddress("time", &fTime);
 
     // add branches from the TRex derived generators
+    // treeGen
     fTISTARGenChain.SetBranchAddress("reactionEnergy",      &fTISTARGenReactionBeamEnergy);
     fTISTARGenChain.SetBranchAddress("reactionEnergyCM",    &fTISTARGenReactionBeamEnergyCM);
     fTISTARGenChain.SetBranchAddress("reactionX",           &fTISTARGenReactionX);
@@ -590,6 +595,19 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fTISTARGenChain.SetBranchAddress("recoilEnergy",        &fTISTARGenRecoilEnergy);
     fTISTARGenChain.SetBranchAddress("reaction",            &fTISTARGenReaction);
 
+    // treeDet
+    // layer 1
+    fTISTARDetChain.SetBranchAddress("TistarSiLayer1Strip1_MC", &fTISTARFirstDeltaE[0]); // forward (+z), +x
+    fTISTARDetChain.SetBranchAddress("TistarSiLayer1Strip2_MC", &fTISTARFirstDeltaE[1]); // forward (+z), -x
+    fTISTARDetChain.SetBranchAddress("TistarSiLayer1Strip3_MC", &fTISTARFirstDeltaE[2]); // backward (-z), +x
+    fTISTARDetChain.SetBranchAddress("TistarSiLayer1Strip4_MC", &fTISTARFirstDeltaE[3]); // backward (-z), -z
+    // layer 2
+    fTISTARDetChain.SetBranchAddress("TistarSiLayer2Strip1_MC", &fTISTARSecondDeltaE[0]);
+    fTISTARDetChain.SetBranchAddress("TistarSiLayer2Strip2_MC", &fTISTARSecondDeltaE[1]);
+    // layer3
+    fTISTARDetChain.SetBranchAddress("TistarSiLayer3Strip1_MC", &fTISTARPad[0]);
+    fTISTARDetChain.SetBranchAddress("TistarSiLayer3Strip2_MC", &fTISTARPad[1]);
+    
     //create output file
     fOutput = new TFile(outputFileName.c_str(),"recreate");
     if(!fOutput->IsOpen()) {
@@ -672,7 +690,10 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
 
     // TI-STAR
     fTISTARArray        = new std::vector<Detector>;
-    fTree.Branch("TISTARArray",         &fTISTARArray,      fSettings->BufferSize());     
+    fTISTARLayer1       = new std::vector<Detector>;
+    fTISTARLayer2       = new std::vector<Detector>;
+    fTISTARLayer3       = new std::vector<Detector>;
+    fTree.Branch("TISTARArray",         &fTISTARArray,       fSettings->BufferSize());     
     fTree.Branch("TISTARLayer1",        &fTISTARLayer1,      fSettings->BufferSize());     
     fTree.Branch("TISTARLayer2",        &fTISTARLayer2,      fSettings->BufferSize());     
     fTree.Branch("TISTARLayer3",        &fTISTARLayer3,      fSettings->BufferSize());     
@@ -732,12 +753,33 @@ bool Converter::Run() {
     //TH3I* hist3D;
     THnSparseF* histND = NULL;
     long int nEntries = fChain.GetEntries();
+    long int nEntriesDet = fTISTARDetChain.GetEntries();
 
     HitSim * hit = new HitSim(fSettings);
 
     //  const char* charbuffer;
     //  std::string stringbuffer;
     //  std::stringstream ss;
+
+    std::cout << "starting det tree loop..." << std::endl;
+    for(int i = 0; i < nEntriesDet; i++) {
+        status = fTISTARDetChain.GetEntry(i);
+    
+        // calculate layer 1 strip number 
+        for(int strip = 0; strip < 4; strip++) {
+            for(int hit = 0; hit < int(fTISTARFirstDeltaE[strip]->size()); hit++) { 
+                TVector3 particlePos = TVector3(fTISTARFirstDeltaE[strip]->at(hit).GetPosGlobalX()[0], 
+                                                fTISTARFirstDeltaE[strip]->at(hit).GetPosGlobalY()[0], 
+                                                fTISTARFirstDeltaE[strip]->at(hit).GetPosGlobalZ()[0]);
+                TVector3 stripPos = TVector3(fSettings->GetTistarSettings()->GetLayerPositionVector()[0][strip]);
+                TVector3 stripDim = TVector3(fSettings->GetTistarSettings()->GetLayerDimensionVector()[0][strip]);
+                CalculateStripNumber(1, particlePos, stripPos, stripDim);
+                CalculateRingNumber (1, particlePos, stripPos, stripDim);
+            }
+        }        
+
+    }
+    std::cout << "finished det tree loop..." << std::endl;
 
     for(int i = 0; i < nEntries; ++i) {
         status = fChain.GetEntry(i);
@@ -2351,3 +2393,44 @@ double Converter::transY(double x, double y, double z, double theta, double phi)
 double Converter::transZ(double x, double y, double z, double theta, double phi){
     return -x*sin(theta)+z*cos(theta);
 }
+
+int Converter::CalculateStripNumber(int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim) {
+    int stripNb = -1;
+    TVector3 localPos = particlePos - stripPos;
+    double z = localPos.z() + stripDim.z()/2.;
+
+    stripNb = static_cast<int>(z/fSettings->GetTISTARStripWidthZ(layerNb));
+
+    std::cout << "calculate strip number: " << std::endl;
+    std::cout << "particlePos = "; particlePos.Print();
+    std::cout << "localPos =    "; localPos.Print();
+    std::cout << "stripPos =    "; stripPos.Print()   ;
+    std::cout << "stripDim =    "; stripDim.Print()   ;
+    std::cout << "layerNb =     " << layerNb << std::endl;
+    std::cout << "z =           " << z << std::endl;
+    std::cout << "stripWidthZ = " << fSettings->GetTISTARStripWidthZ(layerNb) << std::endl;
+    std::cout << "stripNb =     " << stripNb << std::endl << std::endl;
+
+    return stripNb;
+}
+
+int Converter::CalculateRingNumber(int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim) {
+    int ringNb = -1;
+    TVector3 localPos = particlePos - stripPos;
+    double y = localPos.y() + stripDim.y()/2.;
+
+    ringNb = static_cast<int>(y/fSettings->GetTISTARStripWidthY(layerNb));
+
+    std::cout << "calculate ring number: " << std::endl;
+    std::cout << "particlePos = "; particlePos.Print();
+    std::cout << "localPos =    "; localPos.Print();
+    std::cout << "stripPos =    "; stripPos.Print()   ;
+    std::cout << "stripDim =    "; stripDim.Print()   ;
+    std::cout << "layerNb =     " << layerNb << std::endl;
+    std::cout << "y =           " << y << std::endl;
+    std::cout << "stripWidthY = " << fSettings->GetTISTARStripWidthY(layerNb) << std::endl;
+    std::cout << "ringNb =     " << ringNb << std::endl << std::endl;
+
+    return ringNb;
+}
+
