@@ -42,6 +42,10 @@ LOADLIBES = \
     Particle.o \
     ParticleMC.o \
     HitSim.o \
+    Compound.o \
+    Nucleus.o \
+    Kinematics.o \
+    Reconstruction.o \
 	$(NAME)Dictionary.o
 
 # -------------------- implicit rules --------------------

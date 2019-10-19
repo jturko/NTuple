@@ -104,7 +104,7 @@ class ParticleMC : public TObject {
 		double GetRear() { return fRear; }
 		double GetEdet() { return fEdet; }
 		int GetMult() { return fMult; }
-		std::vector<int> GetStripNr() { return fStripNr; }
+		std::vector<int> & GetStripNr() { return fStripNr; }
 		bool GetNeighborStrip() {
 			if(fStripNr.size() == 2 && fabs(fStripNr[0] - fStripNr[1]) == 1) {
 				return true;
@@ -129,7 +129,7 @@ class ParticleMC : public TObject {
 		std::vector<double> GetPosGlobalY() { return fPosGlobalY; } // leila
 		std::vector<double> GetPosGlobalZ() { return fPosGlobalZ; } // leila
 		std::vector<int> IsStripStopped() { return fStripStopped; }
-		std::vector<int> GetRingNr() { return fRingNr; }
+		std::vector<int> & GetRingNr() { return fRingNr; }
 		std::vector<double> GetRingEnergy() { return fRingEnergy; }
 		std::vector<int> GetRingA() { return fRingA; }
 		std::vector<int> GetRingZ() { return fRingZ; }

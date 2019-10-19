@@ -149,6 +149,7 @@ public:
     }
  
     void SetTistarSettings(TistarSettings * trex_settings) {
+        TistarSettings::Set(trex_settings);
         fTistarSettings = trex_settings;
         for(int i=0; i<2; i++) {
             fTISTARnStripsY[i] = static_cast<int>(fTistarSettings->GetLayerDimensionVector()[i][0].y()/fTISTARStripWidthY[i]); 

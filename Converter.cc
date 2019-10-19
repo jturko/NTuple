@@ -9,7 +9,13 @@
 #include "LightYield.hh"
 
 #include "TistarSettings.hh"
+
 #include "HitSim.hh"
+#include "Compound.hh"
+#include "Kinematics.hh"
+#include "Reconstruction.hh"
+
+#include "TSpline.h"
 
 Converter::Converter(std::vector<std::string>& inputFileNames, const std::string& outputFileName, Settings* settings)
     : fSettings(settings) {
@@ -753,18 +759,141 @@ bool Converter::Run() {
     //TH3I* hist3D;
     THnSparseF* histND = NULL;
     long int nEntries = fChain.GetEntries();
-    long int nEntriesDet = fTISTARDetChain.GetEntries();
-
-    HitSim * hit = new HitSim(fSettings);
 
     //  const char* charbuffer;
     //  std::string stringbuffer;
     //  std::stringstream ss;
 
-    std::cout << "starting det tree loop..." << std::endl;
-    for(int i = 0; i < nEntriesDet; i++) {
-        status = fTISTARDetChain.GetEntry(i);
+// ======================================================================================
     
+    TistarSettings * sett = fSettings->GetTistarSettings();
+    long int nEntriesDet = fTISTARDetChain.GetEntries();
+    
+    std::cout<<"beam N = "<<sett->GetProjectileA()-sett->GetProjectileZ()<<", Z = "<<sett->GetProjectileZ()
+        << " on target N = "<<sett->GetTargetA()-sett->GetTargetZ()<<", Z = "<<sett->GetTargetZ()<<std::endl;
+
+    double beamEnergy = sett->GetBeamEnergy(); //initial beam energy (total) in MeV
+
+    bool isSolid = (sett->GetGasTargetLength() == 0.);
+    if (fSettings->VerbosityLevel()) {
+        if(isSolid) std::cout<<"Using a solid target!"<<std::endl;
+        else        std::cout<<"Using a gas taget!"<<std::endl;
+    }
+
+    TTree* rectr = new TTree("rectr","reconstructed events");
+    std::vector<Particle>* ParticleBranch = new std::vector<Particle>;
+    rectr->Branch("Particle",&ParticleBranch);
+
+    HitSim * hit = new HitSim(fSettings);
+
+    std::string massfile = sett->GetMassFile();
+    if(fSettings->VerbosityLevel()) std::cout<<"Massfile = "<<massfile<<std::endl;
+
+    if(fSettings->VerbosityLevel()) std::cout<<"creating compound \""<<sett->GetTargetMaterialName().c_str()<<"\""<<std::endl;
+    Compound* targetMat = new Compound(sett->GetTargetMaterialName().c_str());
+    std::cout << "Target Material from Settings File: " << sett->GetTargetMaterialName().c_str() <<std::endl;
+    if(!isSolid) targetMat->SetDensity(targetMat->GetDensity()*sett->GetTargetPressure()/6.24151e+08); // 4He gas density in Geant Material Lib.
+    if(fSettings->VerbosityLevel()) std::cout<<"creating compound \"MY\""<<std::endl;
+    Compound* foilMat = new Compound("MY");
+    //if(fSettings->VerbosityLevel()) std::cout<<"creating compound \""<<sett->GetVacuumChamberGas().c_str()<<"\""<<std::endl;
+    //Compound* chamberGasMat = new Compound(sett->GetVacuumChamberGas().c_str());
+    if(fSettings->VerbosityLevel()) std::cout<<"creating compound \""<<"helium"<<"\""<<std::endl;
+    Compound* chamberGasMat = new Compound("helium");
+    chamberGasMat->SetDensity(chamberGasMat->GetDensity()*sett->GetVacuumChamberGasPressure()/6.24151e+08); // internal geant4 units are such that 1 bar = 6.24151e+08 whatevers *** changed by Leila
+    Compound* layerMat = new Compound("silicon");
+
+    // 1n transfer
+    Nucleus* projectile = new Nucleus(sett->GetProjectileZ(), sett->GetProjectileA() - sett->GetProjectileZ(),   massfile.c_str());
+    Nucleus* target     = new Nucleus(sett->GetTargetZ(),     sett->GetTargetA()-sett->GetTargetZ(),             massfile.c_str());
+    Nucleus* ejectile   = new Nucleus(sett->GetProjectileZ(), sett->GetProjectileA()-sett->GetProjectileZ() + 1, massfile.c_str());
+    Nucleus* recoil     = new Nucleus(sett->GetTargetZ(),     sett->GetTargetA()-sett->GetTargetZ() - 1,         massfile.c_str());
+
+    std::cout<<"projectile "<<projectile->GetSymbol()<<" ("<<projectile->GetA()<<", "<<projectile->GetZ()<<"; "<<projectile->GetMass()<<")"<<std::endl;
+    std::cout<<"target "<<target->GetSymbol()<<" ("<<target->GetA()<<", "<<target->GetZ()<<"; "<<target->GetMass()<<")"<<std::endl;
+    std::cout<<"ejectile "<<ejectile->GetSymbol()<<" ("<<ejectile->GetA()<<", "<<ejectile->GetZ()<<"; "<<ejectile->GetMass()<<")"<<std::endl;
+    std::cout<<"recoil "<<recoil->GetSymbol()<<" ("<<recoil->GetA()<<", "<<recoil->GetZ()<<"; "<<recoil->GetMass()<<")"<<std::endl;
+
+    Kinematics* transferP = new Kinematics(projectile, target, recoil, ejectile, beamEnergy, 0.); //reaction.GetGroundStateTransferP();
+    Reconstruction* beamTarget = new Reconstruction(projectile, targetMat);
+
+    double beamEnergyRec;      //beam energy at reaction, reconstructed 
+    double recoilEnergyRec;    //recoil energy, reconstructed
+    double recoilEnergyRecdE;
+    double recoilEnergyRecErest;
+    double recoilThetaRec;
+    double recoilPhiRec;
+
+    double targetThickness = sett->GetTargetThicknessMgPerCm2();
+    double targetLength    = sett->GetTargetPhysicalLength();
+    double targetForwardZ  =   targetLength/2.;
+    double targetBackwardZ = - targetLength/2.;
+    if(fSettings->VerbosityLevel()) { 
+        std::cout <<"Target Thickness from Input File: "<< targetThickness<<std::endl;
+        std::cout <<"Target ForwardZ from Input File: "<< targetForwardZ<<std::endl;
+        std::cout <<"Target BackwardZ from Input File: "<< targetBackwardZ<<std::endl;
+        std::cout <<"Target Length from Input File: "<< targetLength<<std::endl;
+    }
+    TSpline3* energyInTarget = beamTarget->Thickness2EnergyAfter(beamEnergy, targetThickness, targetThickness/1000., true);
+    energyInTarget->Write("energyInTarget");
+
+    // variables for recoil energy loss reconstruction (assuming max. recoil energy of 100 MeV!!!)
+    Reconstruction* recoilTarget = new Reconstruction(recoil, targetMat);
+    Reconstruction* recoilFoil = new Reconstruction(recoil, foilMat);
+    Reconstruction* recoilLayer = new Reconstruction(recoil, layerMat);
+    Reconstruction* recoilChamberGas = new Reconstruction(recoil, chamberGasMat);
+    TSpline3* recoilTargetRange  = recoilTarget->Energy2Range(100., 0.1, !isSolid);
+    TSpline3* recoilTargetEnergy = recoilTarget->Range2Energy(100., 0.1, !isSolid);
+    TSpline3* recoilFoilRange  = recoilFoil->Energy2Range(100., 0.1, false);
+    TSpline3* recoilFoilEnergy = recoilFoil->Range2Energy(100., 0.1, false);
+    TSpline3* recoilLayerRange  = recoilLayer->Energy2Range(100., 0.1, false);
+    TSpline3* recoilLayerEnergy = recoilLayer->Range2Energy(100., 0.1, false);
+    TSpline3* recoilChamberGasRange  = recoilChamberGas->Energy2Range(100., 0.1, true);
+    TSpline3* recoilChamberGasEnergy = recoilChamberGas->Range2Energy(100., 0.1, true); 
+    
+    double foilDistance = sett->GetTargetDiameter()/2.;
+
+    double firstLayerDistance =     sett->GetLayerPositionVector()[0][0].x(); 
+    double secondLayerDistance =    sett->GetLayerPositionVector()[1][0].x();
+    double padDistance =            sett->GetLayerPositionVector()[2][0].x();
+
+    double targetWidthMgCm2 = foilDistance*100.*targetMat->GetDensity();// convert from mm to cm, and from there to mg/cm2 using density
+    double foilThicknessMgCm2 = sett->GetTargetMylarThickness()*100.*1.39;// convert from um to cm, and from there to mg/cm2 using the solid mylar density 1.39 g/cm3.
+    //double firstGasLayerThicknessMgCm2 = 300.*chamberGasMat->GetDensity(); // distance between foil and 1. layer hard-coded to 3 mm *** original
+    double firstGasLayerThicknessMgCm2 = (firstLayerDistance - foilDistance)*100.*chamberGasMat->GetDensity(); // distance between foil and 1. layer, foil distance is not hard-coded to 3 mm any more *** changed by Leila, chamber gas density = gas 4he density 0.164e-3 g/cm3
+    double secondGasLayerThicknessMgCm2 = (secondLayerDistance - firstLayerDistance)*100.*chamberGasMat->GetDensity(); // distance 1. and 2. layer in cm and converted to mg/cm2 using density
+    double thirdGasLayerThicknessMgCm2 = (padDistance - secondLayerDistance)*100.*chamberGasMat->GetDensity(); // distance 2. layer and pad in cm and converted to mg/cm2 using density
+    double secondLayerThicknessMgCm2 = sett->GetLayerDimensionVector()[1][0].x()*100.*2.328; // density Silicon = 2.328 g/cm3
+    double firstLayerThicknessMgCm2 =  sett->GetLayerDimensionVector()[0][0].x()*100.*2.328; // density Silicon = 2.328 g/cm3
+
+    std::cout<<"\n foil distance "<<foilDistance<<" mm => target width = "<<targetWidthMgCm2<<" mg/cm^2"<<std::endl;
+    std::cout<<"first layer distance "<<firstLayerDistance<<" mm and second layer: "<<secondLayerDistance<<" mm"<<std::endl;
+    std::cout<<"foil thickness "<<sett->GetTargetMylarThickness()<<" mm => foilThicknessMgCm2 "<<foilThicknessMgCm2<<" mg/cm^2"<<std::endl;
+    std::cout<<"1. layer thickness "<<sett->GetLayerDimensionVector()[0][0].x()<<" mm => 1. layerThicknessMgCm2 "<<firstLayerThicknessMgCm2<<" mg/cm^2"<<std::endl;
+    std::cout<<"2. layer thickness "<<sett->GetLayerDimensionVector()[1][0].x()<<" mm => 2. layerThicknessMgCm2 "<<secondLayerThicknessMgCm2<<" mg/cm^2"<<std::endl;
+    //std::cout<<"distance foil - 1. layer 3. mm => 1. gas layer thickness = "<<firstGasLayerThicknessMgCm2<<" mg/cm^2"<<std::endl; //  original
+    std::cout<<"distance foil - 1. layer "<<firstLayerDistance - foilDistance<<" mm => 1. gas layer thickness = "<<firstGasLayerThicknessMgCm2<<" mg/cm^2"<<std::endl; // Leila
+    std::cout<<"distance 1. layer - 2. layer "<<secondLayerDistance - firstLayerDistance<<" mm and chambergasdensity "<<chamberGasMat->GetDensity()<<" => 2. gas layer thickness = "<<secondGasLayerThicknessMgCm2<<" mg/cm^2"<<std::endl;
+    std::cout<<"distance 2. layer - pad "<<padDistance - secondLayerDistance<<" mm => 3. gas layer thickness = "<<thirdGasLayerThicknessMgCm2<<" mg/cm^2"<<std::endl;
+  
+// ======================================================================================
+
+    for(int i = 0; i < nEntriesDet; i++) {
+        if(i%1000 == 0 && fSettings->VerbosityLevel() > 0) {
+            std::cout<<std::setw(3)<<100*i/nEntriesDet<<"% done - det loop\r"<<std::flush;
+        }
+        
+        status = fTISTARDetChain.GetEntry(i);
+        fTISTARGenChain.GetEntry(i);
+        TH1F * hist = NULL;
+ 
+        if(fSettings->VerbosityLevel() >= 2) std::cout <<"Loop over entry Nr "<<i<<std::endl;
+        hit->Clear();
+        ParticleBranch->clear();
+        Int_t silicon_mult_first = fTISTARFirstDeltaE[0]->size() + fTISTARFirstDeltaE[1]->size() + fTISTARFirstDeltaE[2]->size() + fTISTARFirstDeltaE[3]->size();
+        Int_t silicon_mult_second = fTISTARSecondDeltaE[0]->size()+ fTISTARSecondDeltaE[1]->size();
+        TVector3 firstposition;
+        TVector3 secondposition;
+
         // calculate layer 1 strip number 
         for(int strip = 0; strip < 4; strip++) {
             for(int hit = 0; hit < int(fTISTARFirstDeltaE[strip]->size()); hit++) { 
@@ -773,13 +902,93 @@ bool Converter::Run() {
                                                 fTISTARFirstDeltaE[strip]->at(hit).GetPosGlobalZ()[0]);
                 TVector3 stripPos = TVector3(fSettings->GetTistarSettings()->GetLayerPositionVector()[0][strip]);
                 TVector3 stripDim = TVector3(fSettings->GetTistarSettings()->GetLayerDimensionVector()[0][strip]);
-                CalculateStripNumber(1, particlePos, stripPos, stripDim);
-                CalculateRingNumber (1, particlePos, stripPos, stripDim);
+                
+                fTISTARFirstDeltaE[strip]->at(hit).GetStripNr().at(0) = CalculateStripNumber(0, particlePos, stripPos, stripDim);
+                fTISTARFirstDeltaE[strip]->at(hit).GetRingNr().at(0) = CalculateRingNumber(0, particlePos, stripPos, stripDim);
+        
+                hist = Get1DHistogram(Form("Layer1Strip%i_nStripZ",strip+1),"TISTAR1D");        
+                hist->Fill( fTISTARFirstDeltaE[strip]->at(hit).GetStripNr().at(0) );
+                hist = Get1DHistogram(Form("Layer1Strip%i_nStripY",strip+1),"TISTAR1D");        
+                hist->Fill( fTISTARFirstDeltaE[strip]->at(hit).GetRingNr().at(0) );
             }
         }        
+        // calculate layer 2 strip number 
+        for(int strip = 0; strip < 2; strip++) {
+            for(int hit = 0; hit < int(fTISTARSecondDeltaE[strip]->size()); hit++) { 
+                TVector3 particlePos = TVector3(fTISTARSecondDeltaE[strip]->at(hit).GetPosGlobalX()[0], 
+                                                fTISTARSecondDeltaE[strip]->at(hit).GetPosGlobalY()[0], 
+                                                fTISTARSecondDeltaE[strip]->at(hit).GetPosGlobalZ()[0]);
+                TVector3 stripPos = TVector3(fSettings->GetTistarSettings()->GetLayerPositionVector()[1][strip]);
+                TVector3 stripDim = TVector3(fSettings->GetTistarSettings()->GetLayerDimensionVector()[1][strip]);
+                
+                fTISTARSecondDeltaE[strip]->at(hit).GetStripNr().at(0) = CalculateStripNumber(1, particlePos, stripPos, stripDim);
+                fTISTARSecondDeltaE[strip]->at(hit).GetRingNr().at(0) = CalculateRingNumber(1, particlePos, stripPos, stripDim);
+                
+                hist = Get1DHistogram(Form("Layer2Strip%i_nStripZ",strip+1),"TISTAR1D");        
+                hist->Fill( fTISTARSecondDeltaE[strip]->at(hit).GetStripNr().at(0) );
+                hist = Get1DHistogram(Form("Layer2Strip%i_nStripY",strip+1),"TISTAR1D");        
+                hist->Fill( fTISTARSecondDeltaE[strip]->at(hit).GetRingNr().at(0) );
+            }
+        }
+        
+        Int_t index_first = 0;
+        Int_t index_second = 0;
 
+        if(silicon_mult_first > 1 || silicon_mult_second > 1) {
+            std::cout<<"Warning: Multiple hits in Silicon Tracker! "<<std::endl
+                     <<"First layer:  "<<silicon_mult_first<<" ( ";
+            for(auto dir : fTISTARFirstDeltaE) {
+                std::cout<<dir->size()<<" ";
+            }
+            std::cout<<")  Second layer:  "<<silicon_mult_second<<" ( ";
+            for(auto dir : fTISTARSecondDeltaE) {
+                std::cout<<dir->size()<<" ";
+            }
+            std::cout<<")"<<std::endl;
+        }
+
+        if(silicon_mult_first == 1 && (silicon_mult_second == 1 || isSolid)) {
+            if(fTISTARFirstDeltaE[0]->size() == 1 ) {
+                hit->SetFirstDeltaE(fTISTARFirstDeltaE[0]->at(0), kForward);
+                index_first = 0;
+            } else if(fTISTARFirstDeltaE[1]->size() == 1 ) {
+                hit->SetFirstDeltaE(fTISTARFirstDeltaE[1]->at(0), kForward);
+                index_first = 1;
+            } else if(fTISTARFirstDeltaE[2]->size() == 1 ) {
+                hit->SetFirstDeltaE(fTISTARFirstDeltaE[2]->at(0), kBackward);
+                index_first = 2;
+            } else {
+                hit->SetFirstDeltaE(fTISTARFirstDeltaE[3]->at(0), kBackward);
+                index_first = 3;
+            }
+
+            if(fTISTARSecondDeltaE[0]->size() == 1 ) {
+                hit->SetSecondDeltaE(fTISTARSecondDeltaE[0]->at(0), kForward);
+                index_second = 0;
+            } else if(fTISTARSecondDeltaE[1]->size() == 1) {
+                hit->SetSecondDeltaE(fTISTARSecondDeltaE[1]->at(0), kBackward);
+                index_second = 1;
+            }
+
+            if(silicon_mult_second == 1) {
+                if(fTISTARPad[index_second]->size() == 1 ) {
+                    hit->SetPad(fTISTARPad[index_second]->at(0));
+                }
+
+                if(fSettings->VerbosityLevel()) {
+                    std::cout<<"Using pad "<<index_second<<" with "<<fTISTARPad[index_second]->size()<<" detectors"<<std::endl;
+                    for(int p = 0; p < 2; ++p) {
+                        for(size_t d = 0; d < fTISTARPad[p]->size(); ++d) {
+                            std::cout<<p<<": pad "<<fTISTARPad[p]->at(d).GetID()<<" = "<<fTISTARPad[p]->at(d).GetEdet()<<" keV / "<<fTISTARPad[p]->at(d).GetRear()<<" keV"<<std::endl;
+                        }
+                    }
+                }
+            }
+        }
     }
-    std::cout << "finished det tree loop..." << std::endl;
+    if(fSettings->VerbosityLevel() > 0) std::cout<<"100% done - det loop"<<std::endl;
+
+// ======================================================================================
 
     for(int i = 0; i < nEntries; ++i) {
         status = fChain.GetEntry(i);
@@ -895,6 +1104,7 @@ bool Converter::Run() {
             for(size_t firstDet = 0; firstDet < fTISTARArray->size(); ++firstDet) {
                 hist1D->Fill((fTISTARArray->at(firstDet).DetectorId()));
             }            
+    
 
             // GRIFFIN Crystal
             FillHistDetector1DGamma(hist1D, fGriffinCrystal, "griffin_crystal_unsup_edep_cry", "Griffin1D");
@@ -2401,15 +2611,20 @@ int Converter::CalculateStripNumber(int layerNb, TVector3 particlePos, TVector3 
 
     stripNb = static_cast<int>(z/fSettings->GetTISTARStripWidthZ(layerNb));
 
-    std::cout << "calculate strip number: " << std::endl;
-    std::cout << "particlePos = "; particlePos.Print();
-    std::cout << "localPos =    "; localPos.Print();
-    std::cout << "stripPos =    "; stripPos.Print()   ;
-    std::cout << "stripDim =    "; stripDim.Print()   ;
-    std::cout << "layerNb =     " << layerNb << std::endl;
-    std::cout << "z =           " << z << std::endl;
-    std::cout << "stripWidthZ = " << fSettings->GetTISTARStripWidthZ(layerNb) << std::endl;
-    std::cout << "stripNb =     " << stripNb << std::endl << std::endl;
+    if(stripNb > static_cast<int>(fSettings->GetTistarSettings()->GetLayerDimensionVector()[layerNb][0].z()/fSettings->GetTISTARStripWidthZ(layerNb)) || stripNb < 0) {
+        std::cout<<"Problem: localZ = "<<z<<" , stripNb = "<<stripNb<<std::endl;
+        return -1;
+    }
+
+    //std::cout << "calculate strip number: " << std::endl;
+    //std::cout << "particlePos = "; particlePos.Print();
+    //std::cout << "localPos =    "; localPos.Print();
+    //std::cout << "stripPos =    "; stripPos.Print()   ;
+    //std::cout << "stripDim =    "; stripDim.Print()   ;
+    //std::cout << "layerNb =     " << layerNb << std::endl;
+    //std::cout << "z =           " << z << std::endl;
+    //std::cout << "stripWidthZ = " << fSettings->GetTISTARStripWidthZ(layerNb) << std::endl;
+    //std::cout << "stripNb =     " << stripNb << std::endl << std::endl;
 
     return stripNb;
 }
@@ -2420,16 +2635,21 @@ int Converter::CalculateRingNumber(int layerNb, TVector3 particlePos, TVector3 s
     double y = localPos.y() + stripDim.y()/2.;
 
     ringNb = static_cast<int>(y/fSettings->GetTISTARStripWidthY(layerNb));
+    
+    if(ringNb > static_cast<int>(fSettings->GetTistarSettings()->GetLayerDimensionVector()[layerNb][0].y()/fSettings->GetTISTARStripWidthY(layerNb)) || ringNb < 0) {
+        std::cout<<"Problem: localY = "<<y<<" , ringNb = "<<ringNb<<std::endl;
+        return -1;
+    }
 
-    std::cout << "calculate ring number: " << std::endl;
-    std::cout << "particlePos = "; particlePos.Print();
-    std::cout << "localPos =    "; localPos.Print();
-    std::cout << "stripPos =    "; stripPos.Print()   ;
-    std::cout << "stripDim =    "; stripDim.Print()   ;
-    std::cout << "layerNb =     " << layerNb << std::endl;
-    std::cout << "y =           " << y << std::endl;
-    std::cout << "stripWidthY = " << fSettings->GetTISTARStripWidthY(layerNb) << std::endl;
-    std::cout << "ringNb =     " << ringNb << std::endl << std::endl;
+    //std::cout << "calculate ring number: " << std::endl;
+    //std::cout << "particlePos = "; particlePos.Print();
+    //std::cout << "localPos =    "; localPos.Print();
+    //std::cout << "stripPos =    "; stripPos.Print()   ;
+    //std::cout << "stripDim =    "; stripDim.Print()   ;
+    //std::cout << "layerNb =     " << layerNb << std::endl;
+    //std::cout << "y =           " << y << std::endl;
+    //std::cout << "stripWidthY = " << fSettings->GetTISTARStripWidthY(layerNb) << std::endl;
+    //std::cout << "ringNb =     " << ringNb << std::endl << std::endl;
 
     return ringNb;
 }
