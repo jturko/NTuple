@@ -55,7 +55,7 @@ TVector3 HitSim::FirstPosition(bool doubleSidedFirstLayer, bool smear) {
 	double x,y,z;
 
 	// quadrant
-	int quadr = fFirstDeltaE->GetID();
+	int quadr = fFirstDeltaE->GetID() - 1;
 	//std::cout<<" \n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! first layer no: "<< quadr << std::endl;
 
 	// strip number = perpendicular to beam direction
@@ -270,7 +270,7 @@ TVector3 HitSim::SecondPosition(bool smear) {
 	double x,y,z;
 
 	// quadrant
-	int quadr = fSecondDeltaE->GetID();  
+	int quadr = fSecondDeltaE->GetID() - 1;   
 	//std::cout<<" \n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! second layer no: "<< quadr << std::endl;                                                 
 
 	// strip number = strips perpendicular to beam direction
@@ -367,7 +367,8 @@ TVector3 HitSim::SecondPosition(bool smear) {
 		}
 	} else { // backward
 		//std::cout<<" \n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 2. layer strips/rings quadr backward: "<< quadr << std::endl;
-		z = fTRexSett->GetLayerPositionVector()[0][quadr].z() + fTRexSett->GetLayerDimensionVector()[1][0].y()/2. - strip*fSett->GetTISTARStripWidthY(1);
+		z = fTRexSett->GetLayerPositionVector()[1][quadr].z() + fTRexSett->GetLayerDimensionVector()[1][0].y()/2. - strip*fSett->GetTISTARStripWidthY(1);
+		//z = fTRexSett->GetLayerPositionVector()[0][quadr].z() + fTRexSett->GetLayerDimensionVector()[1][0].y()/2. - strip*fSett->GetTISTARStripWidthY(1);
 		//change ring # so that the range isn't 0 - (n-1), but -n/2 - n/2
 		ring -= fTRexSett->GetLayerDimensionVector()[1][0].z()/fSett->GetTISTARStripWidthZ(1)/2.;
 

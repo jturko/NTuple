@@ -480,4 +480,13 @@ Settings::Settings(std::string fileName, int verbosityLevel) :
     fRangeLow["0RES_TISTAR1D"] = env.GetValue("Histogram.1D.TISTAR.RangeLow.keV",0.5);
     fRangeHigh["0RES_TISTAR1D"] = env.GetValue("Histogram.1D.TISTAR.RangeHigh.keV",8192.0);
 
+    fNofBins["TISTAR2D"] = env.GetValue("Histogram.2D.TISTAR.NofBins",10000);
+    fRangeLow["TISTAR2D"] = env.GetValue("Histogram.2D.TISTAR.RangeLow.keV",0.0);
+    fRangeHigh["TISTAR2D"] = env.GetValue("Histogram.2D.TISTAR.RangeHigh.keV",10000.0);
+    
+    fNofBins["0RES_TISTAR2D"] = env.GetValue("Histogram.2D.TISTAR.NofBins",10000);
+    fRangeLow["0RES_TISTAR2D"] = env.GetValue("Histogram.2D.TISTAR.RangeLow.keV",0.0);
+    fRangeHigh["0RES_TISTAR2D"] = env.GetValue("Histogram.2D.TISTAR.RangeHigh.keV",10000.0);
+    
+
 }

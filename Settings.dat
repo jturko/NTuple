@@ -812,4 +812,7 @@ Histogram.1D.TISTAR.NofBins:                50000.0
 Histogram.1D.TISTAR.RangeLow.keV:           0.0
 Histogram.1D.TISTAR.RangeHigh.keV:          50000.0
 
+Histogram.2D.TISTAR.NofBins:                100
+Histogram.2D.TISTAR.RangeLow.keV:           0.0
+Histogram.2D.TISTAR.RangeHigh.keV:          100.0
 

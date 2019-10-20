@@ -766,6 +766,9 @@ bool Converter::Run() {
 
 // ======================================================================================
     
+    bool dontSmear = false;
+    bool doubleSidedFirstLayer = false;    
+
     TistarSettings * sett = fSettings->GetTistarSettings();
     long int nEntriesDet = fTISTARDetChain.GetEntries();
     
@@ -875,6 +878,37 @@ bool Converter::Run() {
     std::cout<<"distance 1. layer - 2. layer "<<secondLayerDistance - firstLayerDistance<<" mm and chambergasdensity "<<chamberGasMat->GetDensity()<<" => 2. gas layer thickness = "<<secondGasLayerThicknessMgCm2<<" mg/cm^2"<<std::endl;
     std::cout<<"distance 2. layer - pad "<<padDistance - secondLayerDistance<<" mm => 3. gas layer thickness = "<<thirdGasLayerThicknessMgCm2<<" mg/cm^2"<<std::endl;
   
+    Particle part;
+
+    // create and save energy vs. theta-lab splines for reaction at front/middle/back of target
+    //std::cout<<"beam energy at front/middle/back of target: "<<beamEnergy/sett->GetProjectileA()<<"/";
+    std::cout<<"beam energy at front/middle/back of target: "<<beamEnergy<<"/";
+    //transferP->SetEBeam(beamEnergy/sett->GetProjectileA());
+    transferP->SetEBeam(beamEnergy);
+    TSpline3* front = transferP->Evslab(0., 180., 1.);
+    front->Write("RecoilEVsThetaLabFront");
+    //std::cout<<beamTarget->EnergyAfter(beamEnergy, -3, true)/sett->GetProjectileA()<<"/";
+    std::cout<<energyInTarget->Eval(targetThickness/2.)/1000.<<"/";
+    //transferP->SetEBeam(beamTarget->EnergyAfter(beamEnergy, -3, true)/sett->GetProjectileA());
+    transferP->SetEBeam(energyInTarget->Eval(targetThickness/2.)/1000.);
+    TSpline3* middle = transferP->Evslab(0., 180., 1.);
+    middle->Write("RecoilEVsThetaLabMiddle");
+    //std::cout<<beamTarget->EnergyAfter(beamEnergy, -3, true)/sett->GetProjectileA()<<std::endl;
+    std::cout<<energyInTarget->Eval(targetThickness)/1000.<<std::endl;
+    //transferP->SetEBeam(beamTarget->EnergyAfter(beamEnergy, -3, true)/sett->GetProjectileA());
+    transferP->SetEBeam(energyInTarget->Eval(targetThickness)/1000.);
+
+    TSpline3* back = transferP->Evslab(0., 180., 1.);
+    back->Write("RecoilEVsThetaLabBack");
+
+    double dE1Eloss=0;
+    double dE2Eloss=0;
+    double dE1ElossRange=0;
+    double dE2ElossRange=0;
+    double dE1MeasuredCorr=0;
+    double dE1MeasMinRec;
+    double dE2MeasMinRec;
+
 // ======================================================================================
 
     for(int i = 0; i < nEntriesDet; i++) {
@@ -966,7 +1000,7 @@ bool Converter::Run() {
                 hit->SetSecondDeltaE(fTISTARSecondDeltaE[0]->at(0), kForward);
                 index_second = 0;
             } else if(fTISTARSecondDeltaE[1]->size() == 1) {
-                hit->SetSecondDeltaE(fTISTARSecondDeltaE[1]->at(0), kBackward);
+                hit->SetSecondDeltaE(fTISTARSecondDeltaE[1]->at(0), kForward);
                 index_second = 1;
             }
 
@@ -975,7 +1009,7 @@ bool Converter::Run() {
                     hit->SetPad(fTISTARPad[index_second]->at(0));
                 }
 
-                if(fSettings->VerbosityLevel()) {
+                if(fSettings->VerbosityLevel() > 1) {
                     std::cout<<"Using pad "<<index_second<<" with "<<fTISTARPad[index_second]->size()<<" detectors"<<std::endl;
                     for(int p = 0; p < 2; ++p) {
                         for(size_t d = 0; d < fTISTARPad[p]->size(); ++d) {
@@ -984,9 +1018,65 @@ bool Converter::Run() {
                     }
                 }
             }
-        }
-    }
-    if(fSettings->VerbosityLevel() > 0) std::cout<<"100% done - det loop"<<std::endl;
+
+            //get position of hit in first layer
+            firstposition = hit->FirstPosition(doubleSidedFirstLayer, !dontSmear);
+
+            // get position of hit in second layer
+            if(!isSolid) secondposition = hit->SecondPosition(!dontSmear);
+            else         secondposition.SetXYZ(0., 0., 0.);
+
+            part.Clear();
+        
+            // vector between two hits in Siliocn Tracker
+            if(isSolid) part.SetPosition(firstposition);
+            else        part.SetPosition(secondposition - firstposition);
+            if(fSettings->VerbosityLevel() > 1) {
+                std::cout<<"Position to first hit: "<< firstposition.X()<<"  "<<firstposition.Y()<<"   "<<firstposition.Z()<<std::endl;
+                std::cout<<"Position to second hit: "<< secondposition.X()<<"  "<<secondposition.Y()<<"   "<<secondposition.Z()<<std::endl;
+                std::cout<<"Position of relative vector: "<< part.GetPosition().X()<<"  "<<part.GetPosition().Y()<<"  "<<part.GetPosition().Z()<<std::endl;
+            }
+    
+            // reaction angles
+            double recoilThetaSim = fTISTARGenRecoilTheta*180./TMath::Pi();
+            recoilThetaRec = part.GetPosition().Theta()*180./TMath::Pi();
+            double recoilPhiSim = fTISTARGenRecoilPhi*180./TMath::Pi();
+            recoilPhiRec = part.GetPosition().Phi()*180./TMath::Pi();
+            if(fSettings->VerbosityLevel() > 1) std::cout<<"reaction phi from position: "<<recoilPhiRec<<" - "<<recoilPhiSim<<" = "<<(recoilPhiRec - recoilPhiSim)<<std::endl;
+            if(fSettings->VerbosityLevel() > 1) std::cout<<"reaction theta from position: "<<recoilThetaRec<<" - "<<recoilThetaSim<<" = "<<(recoilThetaRec - recoilThetaSim)<<std::endl;
+
+            TVector3 vertex;                   //reconstructed vertex
+            if(!isSolid) {
+                //find the closest point between beam axis and vector of the two hits in the silicon tracker
+                TVector3 r = part.GetPosition();  //relative vector from first hit to second hit
+                TVector3 r2 = secondposition;     // vector to second hit
+                double t = 0;                          //line parameter to calculate vertex; temp use only
+                if((r*r - r.Z()*r.Z()) != 0 ) t = (r2*r - (r2.Z()*r.Z()))/(r*r - r.Z()*r.Z());
+                vertex = r2 -( t*r);
+            } else {
+                vertex.SetXYZ(0., 0., (targetForwardZ + targetBackwardZ)/2.); // middle of target
+            }
+            if(fSettings->VerbosityLevel() > 1) {
+                std::cout <<"Vertex: "<< vertex.X() <<"  "<<vertex.Y() <<"   "<< vertex.Z()<<std::endl;
+                std::cout <<"Z from simu: "<< (fTISTARGenReactionZ)<<std::endl;
+            }
+            //update particle information
+            if(vertex.Z() > targetForwardZ) {
+                if(fSettings->VerbosityLevel() > 1) std::cout<<"Correcting vertex z from "<<vertex.Z();
+                vertex.SetZ(targetForwardZ);
+                if(fSettings->VerbosityLevel() > 1) std::cout<<" to "<<vertex.Z()<<std::endl;
+            }
+            if(vertex.Z() < targetBackwardZ) {
+                if(fSettings->VerbosityLevel() > 1) std::cout<<"Correcting vertex z from "<<vertex.Z();
+                vertex.SetZ(targetBackwardZ);
+                if(fSettings->VerbosityLevel() > 1) std::cout<<" to "<<vertex.Z()<<std::endl;
+            }
+
+        } // end of mult 1 events if-statement
+    
+    if(fSettings->VerbosityLevel() > 1) std::cout << std::endl;
+    } // end of event loop
+    if(fSettings->VerbosityLevel()) std::cout<<"100% done - det loop"<<std::endl;
 
 // ======================================================================================
 
