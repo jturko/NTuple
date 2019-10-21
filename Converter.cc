@@ -918,7 +918,6 @@ bool Converter::Run() {
         
         status = fTISTARDetChain.GetEntry(i);
         fTISTARGenChain.GetEntry(i);
-        TH1F * hist = NULL;
  
         if(fSettings->VerbosityLevel() >= 2) std::cout <<"Loop over entry Nr "<<i<<std::endl;
         hit->Clear();
@@ -939,11 +938,20 @@ bool Converter::Run() {
                 
                 fTISTARFirstDeltaE[strip]->at(hit).GetStripNr().at(0) = CalculateStripNumber(0, particlePos, stripPos, stripDim);
                 fTISTARFirstDeltaE[strip]->at(hit).GetRingNr().at(0) = CalculateRingNumber(0, particlePos, stripPos, stripDim);
+                if(fSettings->VerbosityLevel() > 1) {
+                    std::cout << std::setprecision(4) << std::fixed;
+                    std::cout << " ---> first layer pos = " << particlePos.x() << " , " << particlePos.y() << " , " << particlePos.z() << std::endl;
+                }
         
-                hist = Get1DHistogram(Form("Layer1Strip%i_nStripZ",strip+1),"TISTAR1D");        
-                hist->Fill( fTISTARFirstDeltaE[strip]->at(hit).GetStripNr().at(0) );
-                hist = Get1DHistogram(Form("Layer1Strip%i_nStripY",strip+1),"TISTAR1D");        
-                hist->Fill( fTISTARFirstDeltaE[strip]->at(hit).GetRingNr().at(0) );
+                hist1D = Get1DHistogram(Form("Layer1Strip%i_nStripZ",strip+1),"TISTAR1D");        
+                hist1D->Fill( fTISTARFirstDeltaE[strip]->at(hit).GetStripNr().at(0) );
+                hist1D = Get1DHistogram(Form("Layer1Strip%i_nStripY",strip+1),"TISTAR1D");        
+                hist1D->Fill( fTISTARFirstDeltaE[strip]->at(hit).GetRingNr().at(0) );
+                
+                hist2D = Get2DHistogram(Form("Layer1Strip%i_nStripZ_vs_Z",strip+1),"TISTAR2D");        
+                hist2D->Fill( fTISTARFirstDeltaE[strip]->at(hit).GetStripNr().at(0),fTISTARFirstDeltaE[strip]->at(hit).GetPosGlobalZ().at(0) );
+                hist2D = Get2DHistogram(Form("Layer1Strip%i_nStripY_vs_Y",strip+1),"TISTAR2D");        
+                hist2D->Fill( fTISTARFirstDeltaE[strip]->at(hit).GetRingNr().at(0),fTISTARFirstDeltaE[strip]->at(hit).GetPosGlobalY().at(0) );
             }
         }        
         // calculate layer 2 strip number 
@@ -957,11 +965,19 @@ bool Converter::Run() {
                 
                 fTISTARSecondDeltaE[strip]->at(hit).GetStripNr().at(0) = CalculateStripNumber(1, particlePos, stripPos, stripDim);
                 fTISTARSecondDeltaE[strip]->at(hit).GetRingNr().at(0) = CalculateRingNumber(1, particlePos, stripPos, stripDim);
+                if(fSettings->VerbosityLevel() > 1) {
+                    std::cout << " ---> second layer pos = " << particlePos.x() << " , " << particlePos.y() << " , " << particlePos.z() << std::endl;
+                }
                 
-                hist = Get1DHistogram(Form("Layer2Strip%i_nStripZ",strip+1),"TISTAR1D");        
-                hist->Fill( fTISTARSecondDeltaE[strip]->at(hit).GetStripNr().at(0) );
-                hist = Get1DHistogram(Form("Layer2Strip%i_nStripY",strip+1),"TISTAR1D");        
-                hist->Fill( fTISTARSecondDeltaE[strip]->at(hit).GetRingNr().at(0) );
+                hist1D = Get1DHistogram(Form("Layer2Strip%i_nStripZ",strip+1),"TISTAR1D");        
+                hist1D->Fill( fTISTARSecondDeltaE[strip]->at(hit).GetStripNr().at(0) );
+                hist1D = Get1DHistogram(Form("Layer2Strip%i_nStripY",strip+1),"TISTAR1D");        
+                hist1D->Fill( fTISTARSecondDeltaE[strip]->at(hit).GetRingNr().at(0) );
+                
+                //hist2D = Get2DHistogram(Form("Layer2Strip%i_nStripZ_vs_Z",strip+1),"TISTAR1D");        
+                //hist2D->Fill( fTISTARSecondDeltaE[strip]->at(hit).GetStripNr().at(0),fTISTARSecondDeltaE[strip]->at(hit).GetPosGlobalZ().at(0) );
+                //hist2D = Get2DHistogram(Form("Layer2Strip%i_nStripY_vs_Y",strip+1),"TISTAR1D");        
+                //hist2D->Fill( fTISTARSecondDeltaE[strip]->at(hit).GetRingNr().at(0),fTISTARSecondDeltaE[strip]->at(hit).GetPosGlobalY().at(0) );
             }
         }
         
@@ -2697,8 +2713,20 @@ double Converter::transZ(double x, double y, double z, double theta, double phi)
 int Converter::CalculateStripNumber(int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim) {
     int stripNb = -1;
     TVector3 localPos = particlePos - stripPos;
-    double z = localPos.z() + stripDim.z()/2.;
+    //double z = localPos.z() + stripDim.z()/2.;
 
+    double z;
+    if(stripPos.z() > 0.) { // forwards
+        z = localPos.z() + stripDim.z()/2.;
+    } else {                // backwards
+        z = localPos.z() - stripDim.z()/2.;
+    }
+    
+    z = fabs(z);
+    if(z == stripDim.z()) {
+        z -= 1e-5;
+    }
+    
     stripNb = static_cast<int>(z/fSettings->GetTISTARStripWidthZ(layerNb));
 
     if(stripNb > static_cast<int>(fSettings->GetTistarSettings()->GetLayerDimensionVector()[layerNb][0].z()/fSettings->GetTISTARStripWidthZ(layerNb)) || stripNb < 0) {
@@ -2723,6 +2751,10 @@ int Converter::CalculateRingNumber(int layerNb, TVector3 particlePos, TVector3 s
     int ringNb = -1;
     TVector3 localPos = particlePos - stripPos;
     double y = localPos.y() + stripDim.y()/2.;
+
+    if(y == stripDim.y()) {
+        y -= 1e-5;
+    }
 
     ringNb = static_cast<int>(y/fSettings->GetTISTARStripWidthY(layerNb));
     
