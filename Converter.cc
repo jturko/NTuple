@@ -831,10 +831,10 @@ bool Converter::Run() {
     double targetForwardZ  =   targetLength/2.;
     double targetBackwardZ = - targetLength/2.;
     if(fSettings->VerbosityLevel()) { 
-        std::cout <<"Target Thickness from Input File: "<< targetThickness<<std::endl;
-        std::cout <<"Target ForwardZ from Input File: "<< targetForwardZ<<std::endl;
-        std::cout <<"Target BackwardZ from Input File: "<< targetBackwardZ<<std::endl;
-        std::cout <<"Target Length from Input File: "<< targetLength<<std::endl;
+        std::cout <<"Target Thickness from Input File: "<< targetThickness<<" mg/cm2"<<std::endl;
+        std::cout <<"Target ForwardZ from Input File: "<< targetForwardZ<<" mm"<<std::endl;
+        std::cout <<"Target BackwardZ from Input File: "<< targetBackwardZ<<" mm"<<std::endl;
+        std::cout <<"Target Length from Input File: "<< targetLength<<" mm"<<std::endl;
     }
     TSpline3* energyInTarget = beamTarget->Thickness2EnergyAfter(beamEnergy, targetThickness, targetThickness/1000., true);
     energyInTarget->Write("energyInTarget");
@@ -909,6 +909,8 @@ bool Converter::Run() {
     double dE1MeasMinRec;
     double dE2MeasMinRec;
 
+    CreateTistarHistograms(transferP);
+
 // ======================================================================================
 
     for(int i = 0; i < nEntriesDet; i++) {
@@ -916,7 +918,7 @@ bool Converter::Run() {
             std::cout<<std::setw(3)<<100*i/nEntriesDet<<"% done - det loop\r"<<std::flush;
         }
         
-        status = fTISTARDetChain.GetEntry(i);
+        fTISTARDetChain.GetEntry(i);
         fTISTARGenChain.GetEntry(i);
  
         if(fSettings->VerbosityLevel() >= 2) std::cout <<"Loop over entry Nr "<<i<<std::endl;
@@ -973,11 +975,6 @@ bool Converter::Run() {
                 hist1D->Fill( fTISTARSecondDeltaE[strip]->at(hit).GetStripNr().at(0) );
                 hist1D = Get1DHistogram(Form("Layer2Strip%i_nStripY",strip+1),"TISTAR1D");        
                 hist1D->Fill( fTISTARSecondDeltaE[strip]->at(hit).GetRingNr().at(0) );
-                
-                //hist2D = Get2DHistogram(Form("Layer2Strip%i_nStripZ_vs_Z",strip+1),"TISTAR1D");        
-                //hist2D->Fill( fTISTARSecondDeltaE[strip]->at(hit).GetStripNr().at(0),fTISTARSecondDeltaE[strip]->at(hit).GetPosGlobalZ().at(0) );
-                //hist2D = Get2DHistogram(Form("Layer2Strip%i_nStripY_vs_Y",strip+1),"TISTAR1D");        
-                //hist2D->Fill( fTISTARSecondDeltaE[strip]->at(hit).GetRingNr().at(0),fTISTARSecondDeltaE[strip]->at(hit).GetPosGlobalY().at(0) );
             }
         }
         
@@ -1087,6 +1084,165 @@ bool Converter::Run() {
                 vertex.SetZ(targetBackwardZ);
                 if(fSettings->VerbosityLevel() > 1) std::cout<<" to "<<vertex.Z()<<std::endl;
             }
+            hist1D = Get1DHistogram("DeltaZ_VertexCorrection","TISTAR1D",2000,-100,100);        
+            hist1D->Fill( (fTISTARGenReactionZ-vertex.Z()) );
+
+            // target length at reaction
+            double targetThickEvent;
+            if(isSolid) targetThickEvent = targetThickness/2.;
+            else        targetThickEvent = targetThickness * ( vertex.Z() - targetBackwardZ ) / targetLength;
+            if(fSettings->VerbosityLevel()>1) 
+                std::cout<<"Target Thickness at reaction: "<<targetThickEvent<<" = "<<targetThickness<<" * ( "<<vertex.Z()<<" - "<<targetBackwardZ<<" ) / "<<targetLength<<std::endl;
+
+            // reconstruct energy of recoil
+            recoilEnergyRecdE    =  hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()-1) + hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()-1);
+            recoilEnergyRecErest =  hit->GetPadEnergy();
+            recoilEnergyRec = recoilEnergyRecdE + recoilEnergyRecErest;
+            //recoilEnergyRec =  recoilEnergyRecErest;
+            // if(fSettings->VerbosityLevel() && index_first == 0 && index_second == 0)  std::cout<<" 1. layer energy: "<<hit->GetFirstDeltaEEnergy()<<" .. "<<endl;
+            if(fSettings->VerbosityLevel()>1) std::cout<<" 1. layer energy: "<<hit->GetFirstDeltaEEnergy()<<" 2. layer energy: "<<hit->GetSecondDeltaEEnergy()<<" pad energy: "<<hit->GetPadEnergy()<<" => dE: "<<recoilEnergyRecdE<<", Erest: "<<recoilEnergyRecErest<<" => Erec: "<<recoilEnergyRec<<std::endl;
+            // reconstruct energy loss in gas and foil
+            double sinTheta = TMath::Sin(recoilThetaRec/180.*TMath::Pi());
+            double cosTheta = TMath::Cos(recoilThetaRec/180.*TMath::Pi());
+            double tmpPhi = recoilPhiRec; while(tmpPhi > 45.) tmpPhi -= 90.; while(tmpPhi < -45.) tmpPhi += 90.;
+            double cosPhi   = TMath::Cos(tmpPhi/180.*TMath::Pi());
+            double recoilEnergyRecEloss;
+            
+            if(isSolid) {
+                //for the solid target we only need to reconstruct the energy loss in the foil and the target (no chamber gas)
+                double range = recoilFoilRange->Eval(recoilEnergyRec);
+                //recoilEnergyRecEloss = recoilFoilEnergy->Eval(range + foilThicknessMgCm2/(sinTheta*cosPhi));// original
+                recoilEnergyRecEloss = recoilFoilEnergy->Eval(range + foilThicknessMgCm2/(sinTheta)); // changed bei Dennis
+                range = recoilTargetRange->Eval(recoilEnergyRecEloss);
+                recoilEnergyRecEloss = recoilTargetEnergy->Eval(range + targetThickness/2./TMath::Abs(cosTheta));
+
+                // due to changing of the target foil from box to cylinder the ernergy loss is corrected by ommitting cosphi. Leila & Dennis
+
+            } else {
+                // need to reconstruct energy loss in chamber gas, foil, and target
+                double range;
+                if(fSettings->VerbosityLevel()>1) std::cout<<"theta "<<recoilThetaRec<<", phi "<<recoilPhiRec<<" (sinTheta "<<sinTheta<<", cosTheta "<<cosTheta<<", cosPhi "<<cosPhi<<"): ";
+
+                //*** energy loss through the pad ***
+                if(recoilEnergyRecErest > 0. ) {
+                    if(fSettings->VerbosityLevel()>1) std::cout<<"\n\n *** energy loss through the pad *** "<<std::endl;
+
+                    if(fSettings->VerbosityLevel()>1) std::cout<<"from pad "<<recoilEnergyRecErest<<" through "<<(padDistance - secondLayerDistance)/(sinTheta*cosPhi)<<" mm gas \n";
+                    range = recoilChamberGasRange->Eval(recoilEnergyRecErest);
+
+                    if(fSettings->VerbosityLevel()>1) std::cout<<"1. range from the pad Erest "<<range<<std::endl;
+
+                    dE2ElossRange = recoilLayerRange->Eval(recoilChamberGasEnergy->Eval(range + thirdGasLayerThicknessMgCm2/(sinTheta*cosPhi)));
+                    //if(fSettings->VerbosityLevel()>1) std::cout<<"5.a second layer thickness: "<<sett->GetSecondFBarrelDeltaESingleThickness()[0]<<" range of the second layer: "<<dE2ElossRange<<std::endl;
+                    if(fSettings->VerbosityLevel()>1) std::cout<<"5.a second layer thickness: "<<sett->GetLayerDimensionVector()[1][0].x()<<" range of the second layer: "<<dE2ElossRange<<std::endl;
+                    dE2Eloss = recoilLayerEnergy->Eval(dE2ElossRange + secondLayerThicknessMgCm2/(sinTheta*cosPhi)) - recoilChamberGasEnergy->Eval(range + thirdGasLayerThicknessMgCm2/(sinTheta*cosPhi));
+                    dE2MeasMinRec = TMath::Abs(hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1) - dE2Eloss);
+                    
+                    Get1DHistogram("hdE2MeasMinRec","TistarAnalysis")->Fill(hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()) - dE2Eloss);                    
+                    Get1DHistogram("hdE2ElossRangeWoEpad0","TistarAnalysis")->Fill(dE2ElossRange);                    
+                    Get1DHistogram("hdE2Eloss","TistarAnalysis")->Fill(dE2Eloss);
+                    Get1DHistogram("hdE2Measured","TistarAnalysis")->Fill(hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1));
+                    Get2DHistogram("hdE2ElossVsMeasuredWoEpad0","TistarAnalysis")->Fill(dE2Eloss,hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()-1));
+
+                    //if(fSettings->VerbosityLevel()>1) std::cout<<"5.b second layer thickness: "<<sett->GetSecondFBarrelDeltaESingleThickness()[0]<<" range of the second layer: "<<dE2ElossRange<<" energi loss "<<dE2Eloss<<" the measured energy: "<<hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" total: "<<dE2MeasuredCorr<<std::endl;         
+
+                    recoilEnergyRecEloss = recoilChamberGasEnergy->Eval(range + thirdGasLayerThicknessMgCm2/(sinTheta*cosPhi)) + hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1);
+
+                    if(fSettings->VerbosityLevel()>1) std::cout<<"2. energy loss from the pad + de2 "<<recoilEnergyRecEloss<<std::endl;
+                    range = recoilChamberGasRange->Eval(recoilEnergyRecEloss);
+                    if(fSettings->VerbosityLevel()>1) std::cout<<"3. range from the pad Eloss "<<range<<std::endl;
+
+
+                    Get1DHistogram("hErestMeasured","TistarAnalysis")->Fill(hit->GetPadEnergy());
+
+                } else {
+                    range = recoilChamberGasRange->Eval(hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1));
+                    if(fSettings->VerbosityLevel()>1) std::cout<<"\n range from dE2 for Erest=0 "<<range<<std::endl;
+                    dE2ElossRange = recoilLayerRange->Eval(range);
+                    dE2Eloss = recoilLayerEnergy->Eval(dE2ElossRange + secondLayerThicknessMgCm2/(sinTheta*cosPhi)) - recoilChamberGasEnergy->Eval(range);
+
+
+                    //**hdE2ElossVsMeasured->Fill(dE2Eloss,hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1));
+                }
+
+                //*** energy loss through the second layer ***  
+
+
+                //if(recoilEnergyRecErest == 0. )
+                {dE1ElossRange = recoilLayerRange->Eval(recoilChamberGasEnergy->Eval(range + secondGasLayerThicknessMgCm2/(sinTheta*cosPhi)));
+                //if(fSettings->VerbosityLevel()>1) std::cout<<"7.a first layer thickness: "<<sett->GetFBarrelDeltaESingleThickness()[0]<<" range of the first layer: "<<dE1ElossRange<<std::endl;
+                if(fSettings->VerbosityLevel()>1) std::cout<<"7.a first layer thickness: "<<sett->GetLayerDimensionVector()[0][0].x()<<" range of the first layer: "<<dE1ElossRange<<std::endl;
+                dE1Eloss = recoilLayerEnergy->Eval(dE1ElossRange + firstLayerThicknessMgCm2/(sinTheta*cosPhi)) - recoilChamberGasEnergy->Eval(range + secondGasLayerThicknessMgCm2/(sinTheta*cosPhi));
+                dE1MeasMinRec = TMath::Abs(hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1) - dE1Eloss);
+                //**hdE1ElossRange->Fill(dE1ElossRange);
+                //**hdE1Eloss->Fill(dE1Eloss);
+                //**hdE1Measured->Fill(hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1));
+                //**hdE1MeasMinRec->Fill(hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1) - dE1Eloss);
+                //**hdE1ElossVsMeasured->Fill(dE1Eloss,hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1));
+                //**if(recoilEnergyRecErest == 0.) hdE1ElossVsMeasuredEpad0->Fill(dE1Eloss,hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1));
+                //**if(recoilEnergyRecErest > 0.) hdE1ElossVsMeasuredEpadWo0->Fill(dE1Eloss,hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1));
+                
+                //if(fSettings->VerbosityLevel()>1) std::cout<<"7.b first layer thickness: "<<sett->GetFBarrelDeltaESingleThickness()[0]<<" range of the first layer: "<<dE1ElossRange<<" energi loss "<<dE1Eloss<<" the measured energy: "<<hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" total: "<<dE1MeasuredCorr<<std::endl;}
+                if(fSettings->VerbosityLevel()>1) std::cout<<"7.b first layer thickness: "<<sett->GetLayerDimensionVector()[0][0].x()<<" range of the first layer: "<<dE1ElossRange<<" energi loss "<<dE1Eloss<<" the measured energy: "<<hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" total: "<<dE1MeasuredCorr<<std::endl;}
+
+                if(fSettings->VerbosityLevel()>1) std::cout<<"\n\n *** energy loss through the second layer *** "<<std::endl;
+                if(fSettings->VerbosityLevel()>1) std::cout<<" with 2. layer "<<hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" ("<<recoilEnergyRecEloss<<") through "<<(secondLayerDistance - firstLayerDistance)/(sinTheta*cosPhi)<<" mm gas \n";
+                if(fSettings->VerbosityLevel()>1) std::cout<<"4. range from the pad or second layer "<<range<<std::endl;
+
+                recoilEnergyRecEloss = recoilChamberGasEnergy->Eval(range + secondGasLayerThicknessMgCm2/(sinTheta*cosPhi)) + hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1);
+                if(fSettings->VerbosityLevel()>1) std::cout<<"5. energy loss from the second layer + de1 "<<recoilEnergyRecEloss<<std::endl;
+
+                // for now the foil is box-shaped as well, so we can just continue the same way
+
+                //*** energy loss through the first layer ***
+
+                if(fSettings->VerbosityLevel()>1) std::cout<<"\n\n *** energy loss through the first layer *** "<<std::endl;
+
+                if(fSettings->VerbosityLevel()>1) std::cout<<" with 1. layer "<<hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" ("<<recoilEnergyRecEloss<<") through "<<(firstLayerDistance - foilDistance)/(sinTheta*cosPhi)<<" mm gas \n";
+                range = recoilChamberGasRange->Eval(recoilEnergyRecEloss);
+
+                if(fSettings->VerbosityLevel()>1) std::cout<<"6. range from the pad or second layer "<<range<<std::endl;
+                //recoilEnergyRecEloss = recoilChamberGasEnergy->Eval(range + firstGasLayerThicknessMgCm2/(sinTheta*cosPhi)); // original
+                recoilEnergyRecEloss = recoilChamberGasEnergy->Eval(range + (targetWidthMgCm2*(1 - cosPhi) + 100.*chamberGasMat->GetDensity()*(firstLayerDistance - foilDistance)/(sinTheta*cosPhi))); // changed by Leila: effectiveLength(firstLayer - vertex)/sinTheta*cosPhi - targetRadii/sinTheta = a0/sinTheta*cosPhi - Rt/sinTheta 
+
+                if(fSettings->VerbosityLevel()>1) std::cout<<"7. energy loss from the first layer "<<recoilEnergyRecEloss<<std::endl;
+
+                //*** energy loss through the foil ***
+                if(fSettings->VerbosityLevel()>1) std::cout<<"\n\n *** energy loss through the foil *** "<<std::endl;
+                if(fSettings->VerbosityLevel()>1) std::cout<<" at "<<recoilEnergyRecEloss<<" through "<<foilThicknessMgCm2/(sinTheta*cosPhi)<<" mm foil \n";
+                range = recoilFoilRange->Eval(recoilEnergyRecEloss);
+
+                if(fSettings->VerbosityLevel()>1) std::cout<<"8. range from the foil "<<range<<std::endl;
+                //recoilEnergyRecEloss = recoilFoilEnergy->Eval(range + foilThicknessMgCm2/(sinTheta*cosPhi));// original 
+                recoilEnergyRecEloss = recoilFoilEnergy->Eval(range + foilThicknessMgCm2/(sinTheta));// changed by Leila
+
+                if(fSettings->VerbosityLevel()>1) std::cout<<"9. energy loss from the foil "<<recoilEnergyRecEloss<<std::endl;
+                if(fSettings->VerbosityLevel()>1) std::cout<<"\n recoilEnergyRec: "<<recoilEnergyRec<<", range: "<<range<<" + foilThicknessMgCm2/(sinTheta*cosPhi) "<<foilThicknessMgCm2/(sinTheta)<<" => recoilEnergyRecEloss: "<<recoilEnergyRecEloss<<std::endl;
+            
+                //*** energy loss through the target ***
+                // for now assume that the "box" inside the foil is filled with target gas. Not box any more. It is a cylinder --> phi is ommitted!
+                if(fSettings->VerbosityLevel()>1) std::cout<<"\n\n *** energy loss through the target *** "<<std::endl;
+                if(fSettings->VerbosityLevel()>1) std::cout<<" at "<<recoilEnergyRecEloss<<" through "<<targetWidthMgCm2/(sinTheta*cosPhi)<<" mm gas \n";
+                range = recoilTargetRange->Eval(recoilEnergyRecEloss);
+
+                if(fSettings->VerbosityLevel()>1) std::cout<<"10. range from the target "<<range<<std::endl;
+                //std::cout<<recoilEnergyRecEloss<<", "<<range<<" + "<<targetWidthMgCm2/(sinTheta*cosPhi);
+                //recoilEnergyRecEloss = recoilTargetEnergy->Eval(range + targetWidthMgCm2/(sinTheta*cosPhi));// original
+                recoilEnergyRecEloss = recoilTargetEnergy->Eval(range + targetWidthMgCm2/(sinTheta));// changed by Leila
+
+                if(fSettings->VerbosityLevel()>1) std::cout<<"11. energy loss from the target "<<recoilEnergyRecEloss<<std::endl;
+                //std::cout<<" => "<<recoilEnergyRecEloss<<std::endl;
+                if(fSettings->VerbosityLevel()>1) std::cout<<" => "<<recoilEnergyRecEloss<<std::endl;
+            }
+            
+            if(fSettings->VerbosityLevel()>1) std::cout<<"\n theta "<<recoilThetaRec<<", phi "<<recoilPhiRec<<" (sinTheta "<<sinTheta<<", tmpPhi "<<tmpPhi<<", cosPhi "<<cosPhi<<"): "<<foilThicknessMgCm2/(sinTheta)<<" mg/cm^2, "<<recoilEnergyRec<<" => "<<recoilEnergyRecEloss<<", diff "<<recoilEnergyRecEloss-recoilEnergyRec<<std::endl;
+
+            // position has already been set above
+            part.SetRecEnergy(recoilEnergyRec);
+            part.SetType(2); //proton; this is for one-neutron transfer, only; this sets the mass of the particle
+            part.SetReconstructed(); // set TLorentzVector using mass, rec. energy, and position 
+
+
 
         } // end of mult 1 events if-statement
     
@@ -2497,6 +2653,21 @@ void Converter::AddbackPaces() {
 void Converter::PrintStatistics() {
 }
 
+TH1F* Converter::Get1DHistogram(std::string histogramName, std::string directoryName, int nbins, double lowbin, double highbin) {
+    //try and find this histogram
+    TH1F* hist = (TH1F*) gDirectory->FindObjectAny(histogramName.c_str());
+
+    if(hist == nullptr){
+        //if the histogram doesn't exist, we create it and add it to the histogram list
+        hist = new TH1F(histogramName.c_str(),histogramName.c_str(),nbins,lowbin,highbin);
+        if(fHistograms.find(directoryName) == fHistograms.end()) {
+            fHistograms[directoryName] = new TList;
+        }
+        fHistograms[directoryName]->Add((TObject*) hist);
+    }
+    return hist;
+}
+
 TH1F* Converter::Get1DHistogram(std::string histogramName, std::string directoryName) {
     //try and find this histogram
     TH1F* hist = (TH1F*) gDirectory->FindObjectAny(histogramName.c_str());
@@ -2504,6 +2675,22 @@ TH1F* Converter::Get1DHistogram(std::string histogramName, std::string directory
     if(hist == nullptr){
         //if the histogram doesn't exist, we create it and add it to the histogram list
         hist = new TH1F(histogramName.c_str(),histogramName.c_str(),fSettings->NofBins(directoryName),fSettings->RangeLow(directoryName),fSettings->RangeHigh(directoryName));
+        if(fHistograms.find(directoryName) == fHistograms.end()) {
+            fHistograms[directoryName] = new TList;
+        }
+        fHistograms[directoryName]->Add((TObject*) hist);
+    }
+    return hist;
+}
+
+TH2F* Converter::Get2DHistogram(std::string histogramName, std::string directoryName, int nbinsX, double lowbinX, double highbinX, int nbinsY, double lowbinY, double highbinY) {
+    //try and find this histogram
+    TH2F* hist = (TH2F*) gDirectory->FindObjectAny(histogramName.c_str());
+    if(hist == nullptr){
+        //if the histogram doesn't exist, we create it and add it to the histogram list
+        hist = new TH2F(histogramName.c_str(),histogramName.c_str(),
+                        nbinsX, lowbinX, highbinX,
+                        nbinsY, lowbinY, highbinY);
         if(fHistograms.find(directoryName) == fHistograms.end()) {
             fHistograms[directoryName] = new TList;
         }
@@ -2775,4 +2962,109 @@ int Converter::CalculateRingNumber(int layerNb, TVector3 particlePos, TVector3 s
 
     return ringNb;
 }
+
+void Converter::CreateTistarHistograms(Kinematics * transferP) {
+    // we'll create all the histograms from ReconstructSim here
+    TistarSettings * sett = fSettings->GetTistarSettings();
+    
+    std::string directoryName = "TistarAnalysis";
+    fHistograms[directoryName.c_str()] = new TList;
+    
+    TH2F* originXY = new TH2F("originXY", "y vs. x of reconstructed origin", 200, -10., 10., 200, -10., 10.); fHistograms[directoryName.c_str()]->Add(originXY);
+    TH2F* originXYErr = new TH2F("originXYErr", "Error y vs. error x of reconstructed origin - simulated origin", 200, -10., 10., 200, -10., 10.); fHistograms[directoryName.c_str()]->Add(originXYErr);
+    TH2F* errorOrigin = new TH2F("errorOrigin", "Error between reconstructed and true origin vs. true origin", 200, -100., 100., 1000, -5, 5); fHistograms[directoryName.c_str()]->Add(errorOrigin);
+    TH2F* errorThetaPhi = new TH2F("errorThetaPhi", "Error between reconstructed and true phi vs. error in theta", 600, -30, 30, 720, -360., 360.); fHistograms[directoryName.c_str()]->Add(errorThetaPhi);
+    TH1F* excEnProton = new TH1F("excEnProton", "Excitaiton Energy Spectrum from reconstructed Protons", 5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProton);
+    TH1F* reaction = new TH1F("reaction", "Simulated reaction/level", 10, -0.5, 9.5); fHistograms[directoryName.c_str()]->Add(reaction);
+    TH2F* phiErrorVsPhi = new TH2F("phiErrorVsPhi","Error in reconstructed #varphi vs. simulated #varphi", 360, -180., 180., 720, -360., 360.); fHistograms[directoryName.c_str()]->Add(phiErrorVsPhi);
+
+    TH2F* dE12VsPad = new TH2F("dE12VsPad", "energy loss first+second layer vs. pad energy", 2000, 0, 50000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE12VsPad);
+    TH2F* dE12VsE = new TH2F("dE12VsE", "energy loss first+second layer vs. total energy", 2000, 0, 50000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE12VsE);
+    TH2F* dE1VsE = new TH2F("dE1VsE", "energy loss first layer vs. total energy", 5000, 0, 50000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE1VsE);
+    TH2F* dE2VsE = new TH2F("dE2VsE", "energy loss second layer vs. total energy", 5000, 0, 50000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE2VsE);
+    TH2F* dE1VsdE2 = new TH2F("dE1VsdE2", "energy loss second layer vs. energy loss first layer", 1000, 0, 10000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE1VsdE2);
+    TH2F* eVsTheta = new TH2F("eVsTheta", "recoil energy vs. theta (lab)", 360, 0, 180, 1000, 0, 25000); fHistograms[directoryName.c_str()]->Add(eVsTheta);
+    TH2F* eVsZ = new TH2F("eVsZ", "recoil energy vs. z", 1000, -100., 100., 1000, 0, 25000); fHistograms[directoryName.c_str()]->Add(eVsZ);
+
+    TH2F* eVsZSame = new TH2F("eVsZSame", "recoil energy vs. z, first and second layer both forward or both backward", 1000, -100., 100., 1000, 0, 25000); fHistograms[directoryName.c_str()]->Add(eVsZSame);
+    TH2F* eVsZCross = new TH2F("eVsZCross", "recoil energy vs. z, first and second layer over cross", 1000, -100., 100., 1000, 0, 25000); fHistograms[directoryName.c_str()]->Add(eVsZCross);
+
+
+    TH2F* hEbeamRecVsSim = new TH2F("hEbeamRecVsSim", "beam energy (MeV) in lab reconstructed (x) vs simulated (y)",200,-40,40,200,-40,40); fHistograms[directoryName.c_str()]->Add(hEbeamRecVsSim);
+
+    TH1F* excEnProtonCorr = new TH1F("excEnProtonCorr", "Excitaiton Energy after E loss correction for reconstructed protons", 5000, -5000, 5000); fHistograms[directoryName.c_str()]->Add(excEnProtonCorr);
+    TH1F* excEnProtonCorrEpadCut = new TH1F("excEnProtonCorrEpadCut", "Excitaiton Energy after E loss correction for reconstructed protons with Epad>0", 5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProtonCorrEpadCut);
+    TH2F* excEnProtonCorrVsX = new TH2F("excEnProtonCorrVsX", "Excitation Energy vs Vertex X after E loss correction for reconstructed protons", 5000,-10,10,5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProtonCorrVsX);
+    TH2F* excEnProtonCorrVsY = new TH2F("excEnProtonCorrVsY", "Excitation Energy vs Vertex Y after E loss correction for reconstructed protons", 5000,-10,10,5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProtonCorrVsY);
+    TH2F* excEnProtonCorrVsZ = new TH2F("excEnProtonCorrVsZ", "Excitation Energy vs Vertex Z after E loss correction for reconstructed protons", 5000,-100,100,5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProtonCorrVsZ);
+    TH2F* excEnProtonCorrVsT = new TH2F("excEnProtonCorrVsT", "Excitation Energy vs Vertex T after E loss correction for reconstructed protons", 5000,-10,10,5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProtonCorrVsT);
+    TH2F* excEnProtonCorrVsR = new TH2F("excEnProtonCorrVsR", "Excitation Energy vs Vertex R after E loss correction for reconstructed protons", 4400,-10,100,5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProtonCorrVsR);
+    TH1F* excEnProtonCorrdE1Sigma1 = new TH1F("excEnProtonCorrdE1Sigma1", "Excitation Energy for dE1 1#sigma range after Eloss correction for protons", 5000, -5000, 5000); fHistograms[directoryName.c_str()]->Add(excEnProtonCorrdE1Sigma1);
+    TH1F* excEnProtonCorrdE1Sigma2 = new TH1F("excEnProtonCorrdE1Sigma2", "Excitation Energy for dE1 2#sigma range after Eloss correction for protons", 5000, -5000, 5000); fHistograms[directoryName.c_str()]->Add(excEnProtonCorrdE1Sigma2);
+
+    TH1F* hdE1ElossRange = new TH1F("hdE1ElossRange", "corrected energy range in the first layer", 1000, -100., 3900.); fHistograms[directoryName.c_str()]->Add(hdE1ElossRange);
+    TH1F* hdE2ElossRange = new TH1F("hdE2ElossRange", "corrected energy range in the second layer", 2000, -1000., 9000.); fHistograms[directoryName.c_str()]->Add(hdE2ElossRange);
+    TH1F* hdE2ElossRangeWoEpad0 = new TH1F("hdE2ElossRangeWoEpad0", "corrected energy range in the second layer with Epad>0", 2000, -1000., 9000.); fHistograms[directoryName.c_str()]->Add(hdE2ElossRangeWoEpad0);
+    TH1F* hdE1Eloss = new TH1F("hdE1Eloss", "corrected energy loss in the first layer", 1000, -100., 9900.); fHistograms[directoryName.c_str()]->Add(hdE1Eloss);
+    TH1F* hdE2Eloss = new TH1F("hdE2Eloss", "corrected energy loss in the second layer", 2000, -100., 18900.); fHistograms[directoryName.c_str()]->Add(hdE2Eloss);
+    TH1F* hdE1Measured = new TH1F("hdE1Measured", "measured energy loss in the first layer", 1000, -100., 9900.); fHistograms[directoryName.c_str()]->Add(hdE1Measured);
+    TH1F* hdE2Measured = new TH1F("hdE2Measured", "measured energy loss in the second layer", 2000, -100., 18900.); fHistograms[directoryName.c_str()]->Add(hdE2Measured);
+    TH1F* hErestMeasured = new TH1F("hErestMeasured", "measured energy loss in the pad", 2000, -1000., 39000.); fHistograms[directoryName.c_str()]->Add(hErestMeasured);
+    TH2F* hdE1ElossVsMeasured = new TH2F("hdE1ElossVsMeasured", "corrected energy loss in the first layer vs measured", 1000, -100., 2400., 1000,-100.,2400.); fHistograms[directoryName.c_str()]->Add(hdE1ElossVsMeasured);
+    TH2F* hdE2ElossVsMeasuredWoEpad0 = new TH2F("hdE2ElossVsMeasuredWoEpad0", "corrected energy loss in the second layer vs measured for Epad>0", 2000, -100., 5400., 2000,-100.,5400.); fHistograms[directoryName.c_str()]->Add(hdE2ElossVsMeasuredWoEpad0);
+    TH2F* hdE2ElossVsMeasured = new TH2F("hdE2ElossVsMeasured", "corrected energy loss in the second layer vs measured", 2000, -100., 9400., 2000,-100.,9400.); fHistograms[directoryName.c_str()]->Add(hdE2ElossVsMeasured);
+    TH2F* dE2VsdE2Pad = new TH2F("dE2VsdE2Pad", "energy loss in second layer vs. dE2+pad energy", 2000, 0, 50000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE2VsdE2Pad);
+    TH2F* EPadVsThetaLab = new TH2F("EPadVsThetaLab", "pad energy vs theta lab", 720,0,180.,2000, -1000, 49000); fHistograms[directoryName.c_str()]->Add(EPadVsThetaLab);
+    TH2F* EPadVsZ = new TH2F("EPadVsZ", "pad energy vs z", 1000,-100.,100.,2000, -1000, 49000); fHistograms[directoryName.c_str()]->Add(EPadVsZ);
+    TH2F* dE2VsThetaLabEpadCut = new TH2F("dE2VsThetaLabEpadCut", "second layer energy vs theta lab for Epad=0", 720,0,180.,1000, -100, 4900); fHistograms[directoryName.c_str()]->Add(dE2VsThetaLabEpadCut);
+    TH2F* dE2VsEPadThetaCut = new TH2F("dE2VsEPadThetaCut", "energy loss in second layer vs. pad energy for Theta=40", 2000, -1000, 49000, 1000, -100, 9900); fHistograms[directoryName.c_str()]->Add(dE2VsEPadThetaCut);
+    TH2F* dE1VsThetaLab = new TH2F("dE1VsThetaLab", "first layer energy vs theta lab", 720,0,180.,2000, -100, 4900); fHistograms[directoryName.c_str()]->Add(dE1VsThetaLab);
+    TH2F* dE2VsThetaLab = new TH2F("dE2VsThetaLab", "second layer energy vs theta lab", 720,0,180.,2000, -100, 4900); fHistograms[directoryName.c_str()]->Add(dE2VsThetaLab);
+    TH2F* dE12VsThetaLab = new TH2F("dE12VsThetaLab", "first+second layer energy vs theta lab", 720,0,180.,2000, -100, 7900); fHistograms[directoryName.c_str()]->Add(dE12VsThetaLab);
+    TH2F* dE1EpadVsThetaLab = new TH2F("dE1EpadVsThetaLab", "first layer + pad energy vs theta lab", 720,0,180.,2000, -1000, 49900); fHistograms[directoryName.c_str()]->Add(dE1EpadVsThetaLab);
+    TH2F* dE2EpadVsThetaLab = new TH2F("dE2EpadVsThetaLab", "second layer + pad energy vs theta lab", 720,0,180.,2000, -1000, 49900); fHistograms[directoryName.c_str()]->Add(dE2EpadVsThetaLab);
+    TH2F* hdE1ElossVsMeasuredEpad0 = new TH2F("hdE1ElossVsMeasuredEpad0", "corrected energy loss in the first layer vs measured for Epad=0", 1000, -100., 2400., 1000,-100.,2400.); fHistograms[directoryName.c_str()]->Add(hdE1ElossVsMeasuredEpad0);
+    TH2F* hdE1ElossVsMeasuredEpadWo0 = new TH2F("hdE1ElossVsMeasuredEpadWo0", "corrected energy loss in the first layer vs measured for Epad>0", 1000, -100., 2400., 1000,-100.,2400.); fHistograms[directoryName.c_str()]->Add(hdE1ElossVsMeasuredEpadWo0);
+    TH1F* hdE1MeasMinRec = new TH1F("hdE1MeasMinRec", "(measured - reconstructed) energy loss in the first layer", 1000, -500., 500.); fHistograms[directoryName.c_str()]->Add(hdE1MeasMinRec);
+    TH1F* hdE2MeasMinRec = new TH1F("hdE2MeasMinRec", "(measured - reconstructed) energy loss in the second layer", 1000, -500., 500.); fHistograms[directoryName.c_str()]->Add(hdE2MeasMinRec);
+
+    TH2F* eRecErrVsESim = new TH2F("eRecErrVsESim", "error of reconstructed energy vs. simulated energy of recoil", 1000, 0., 25000., 1000, -5000., 5000.); fHistograms[directoryName.c_str()]->Add(eRecErrVsESim);
+    TH2F* thetaErrorVsZ = new TH2F("thetaErrorVsZ", "Error in #vartheta_{lab} reconstruction vs. simulated z-position;z [mm];#Delta#vartheta_{lab} [^{o}]", 200, -100, 100, 100, -15, 15); fHistograms[directoryName.c_str()]->Add(thetaErrorVsZ);
+    TH2F* thetaErrorVsTheta = new TH2F("thetaErrorVsTheta", "Error in #vartheta_{lab} reconstruction vs. simulated #vartheta_{lab};#vartheta_{lab} [^{o}];#Delta#vartheta_{lab} [^{o}]", 180, 0, 180, 100, -15, 15); fHistograms[directoryName.c_str()]->Add(thetaErrorVsTheta);
+    TH2F* thetaErrorVsThetaEpadCut = new TH2F("thetaErrorVsThetaEpadCut", "Error in #vartheta_{lab} reconstruction vs. simulated #vartheta_{lab};#vartheta_{lab} [^{o}];#Delta#vartheta_{lab} [^{o}] with Epad>0", 180, 0, 180, 100, -15, 15); fHistograms[directoryName.c_str()]->Add(thetaErrorVsThetaEpadCut);
+    TH2F* zReactionEnergy = new TH2F("zReactionEnergy", "z position of reaction vs. Beam energy (rec.)", 200, -100, 100, 1000, 0, 1.1*sett->GetBeamEnergy()); fHistograms[directoryName.c_str()]->Add(zReactionEnergy);
+    TH2F* excEnProtonVsTheta = new TH2F("excEnProtonVsTheta", "Excitation Energy Spectrum from reconstructed Protons;#vartheta_{lab}[^{o}];E_{exc} [keV]", 180, 0., 180., 5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsTheta);
+    TH2F* excEnProtonVsPhi = new TH2F("excEnProtonVsPhi", "Excitation Energy Spectrum from reconstructed Protons;#varphi_{lab}[^{o}];E_{exc} [keV]", 360, -180., 180., 5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsPhi);
+    TH2F* excEnProtonVsZ = new TH2F("excEnProtonVsZ", "Excitation Energy Spectrum from reconstructed Protons;z [mm];E_{exc} [keV]", 200, -100., 100., 5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsZ);
+    TH2F* excEnProtonVsThetaGS = new TH2F("excEnProtonVsThetaGS", "Excitation Energy Spectrum from reconstructed Protons, ground state only;#vartheta_{lab}[^{o}];E_{exc} [keV]", 180, 0., 180., 5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsThetaGS);
+    TH2F* excEnProtonVsZGS = new TH2F("excEnProtonVsZGS", "Excitation Energy Spectrum from reconstructed Protons, ground state only;z [mm];E_{exc} [keV]", 200, -100., 100., 5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsZGS);
+    TH2F* excEnProtonVsThetaCm = new TH2F("excEnProtonVsThetaCm", "Excitation Energy Spectrum from reconstructed Protons;#vartheta_{cm}[^{o}];E_{exc} [keV]", 180, 0., 180., 5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsThetaCm);
+    TH2F* thetaVsZ = new TH2F("thetaVsZ","#vartheta_{lab} vs. z", 200, -100., 100., 180, 0., 180.); fHistograms[directoryName.c_str()]->Add(thetaVsZ);
+    TH2F* thetaVsZSame = new TH2F("thetaVsZSame","#vartheta_{lab} vs. z, first and second layer both forward or both backward", 200, -100., 100., 180, 0., 180.); fHistograms[directoryName.c_str()]->Add(thetaVsZSame);
+
+    TH2F* thetaVsZCross = new TH2F("thetaVsZCross","#vartheta_{lab} vs. z, first and second layer over cross", 200, -100., 100., 180, 0., 180.); fHistograms[directoryName.c_str()]->Add(thetaVsZCross);
+    TH2F* phiVsZ = new TH2F("phiVsZ","#varphi_{lab} vs. z", 200, -100., 100., 360, -180., 180.); fHistograms[directoryName.c_str()]->Add(phiVsZ);
+    TH2F* hitpattern = new TH2F("hitpattern","detector # of second layer vs. detector # of first layer", 2, -0.5, 1.5, 2, -0.5, 1.5); fHistograms[directoryName.c_str()]->Add(hitpattern);
+    TH2F* eCmVsZ = new TH2F("eCmVsZ","energy of cm-system vs. z;z [mm];e-cm [GeV]", 200, -100., 100., 2000, transferP->GetCmEnergy(0.)/1000., transferP->GetCmEnergy(sett->GetBeamEnergy())/1000.); fHistograms[directoryName.c_str()]->Add(eCmVsZ);
+    TH2F* betaCmVsZ = new TH2F("betaCmVsZ","#beta of cm-system vs. z", 200, -100., 100., 2000, 0., 0.2); fHistograms[directoryName.c_str()]->Add(betaCmVsZ);
+    TH2F* stripPattern = new TH2F("stripPattern","Parallel strip # (#varphi) vs. perpendicular strip # (#vartheta)", 2*fSettings->GetTISTARnStripsY(0), 0., 2.*fSettings->GetTISTARnStripsY(0), 4*fSettings->GetTISTARnStripsZ(0), 0., 4.*fSettings->GetTISTARnStripsZ(0)); fHistograms[directoryName.c_str()]->Add(stripPattern);
+    TH2F* recBeamEnergyErrVsZ = new TH2F("recBeamEnergyErrVsZ","Error in reconstructed beam energy vs. z", 200, -100., 100., 1000, -50., 50.); fHistograms[directoryName.c_str()]->Add(recBeamEnergyErrVsZ);
+    TH2F* thetaCmVsThetaLab = new TH2F("thetaCmVsThetaLab", "#vartheta_{cm} vs. #vartheta_{lab};#vartheta_{cm} [^{o}];#vartheta_{lab} [^{o}]", 180,0.,180., 180,0.,180.); fHistograms[directoryName.c_str()]->Add(thetaCmVsThetaLab);
+    TH2F* zErrorVsThetaSim = new TH2F("zErrorVsThetaSim", "Error between reconstructed and true z-position vs. simulated #vartheta_{lab}", 180, 0., 180., 1000, -5, 5); fHistograms[directoryName.c_str()]->Add(zErrorVsThetaSim);
+    TH2F* zErrorVsThetaRec = new TH2F("zErrorVsThetaRec", "Error between reconstructed and true z-position vs. recon structed #vartheta_{lab}", 180, 0., 180., 1000, -5, 5); fHistograms[directoryName.c_str()]->Add(zErrorVsThetaRec);
+    TH2F* zErrorVsthetaError = new TH2F("zErrorVstheaError", "z Erorr vs error in theta", 200, -10., 10., 1000, -5., 5.); fHistograms[directoryName.c_str()]->Add(zErrorVsthetaError);
+    TH2F* elossVsTheta = new TH2F("elossVsTheta", "reconstructed energy loss vs. #vartheta;#vartheta_lab [^{o}];energy loss [keV]", 360, -180., 180., 10000, -100000., 100000.); fHistograms[directoryName.c_str()]->Add(elossVsTheta);
+    TH2F* elossVsPhi = new TH2F("elossVsPhi", "reconstructed energy loss vs. #varphi;#varphi_lab [^{o}];energy loss [keV]", 360, -180., 180., 1000, -10000., 10000.); fHistograms[directoryName.c_str()]->Add(elossVsPhi);
+    TH2F* excEnElossVsTheta = new TH2F("excEnElossVsTheta", "Excitation Energy Spectrum from reconstructed energy loss;#vartheta_{lab}[^{o}];E_{exc} [keV]", 360, -180., 180., 5000,-200000, 200000); fHistograms[directoryName.c_str()]->Add(excEnElossVsTheta);
+    TH2F* excEnElossVsThetaEpadCut = new TH2F("excEnElossVsThetaEpadCut", "Excitation Energy Spectrum from reconstructed energy loss;#vartheta_{lab}[^{o}];E_{exc} [keV] with Epad>0", 180, 0., 180., 5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnElossVsThetaEpadCut);
+
+    UInt_t nofLevels = fTISTARGenChain.GetMaximum("reaction")+1;
+    if(nofLevels < 1) nofLevels = 1;
+    if(nofLevels > 10) nofLevels = 10;
+    std::vector<TH2F*> excEnElossVsThetaLevel(nofLevels);
+    for(size_t r = 0; r < nofLevels; ++r) {
+        excEnElossVsThetaLevel[r] = new TH2F(Form("excEnElossVsThetaLevel_%d",static_cast<int>(r)), Form("Excitation Energy Spectrum from reconstructed energy loss for level %d;#vartheta_{lab}[^{o}];E_{exc} [keV]",static_cast<int>(r)), 180, 0., 180., 5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnElossVsThetaLevel[r]);
+    }
+}
+
 

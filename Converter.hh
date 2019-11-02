@@ -19,6 +19,7 @@
 
 #include "Particle.hh"
 #include "ParticleMC.hh"
+#include "Kinematics.hh"
 
 class Converter {
 public:
@@ -68,10 +69,14 @@ private:
 
     void PrintStatistics();
 
+    TH1F* Get1DHistogram(std::string, std::string, int, double, double);
     TH1F* Get1DHistogram(std::string, std::string);
+    TH2F* Get2DHistogram(std::string, std::string, int, double, double, int, double, double);
     TH2F* Get2DHistogram(std::string, std::string);
     //TH3I* Get3DHistogram(std::string, std::string);
     THnSparseF* GetNDHistogram(std::string, std::string);
+
+    void CreateTistarHistograms(Kinematics*);
 
     void FillHistDetector1DGamma(TH1F* hist1D, std::vector<Detector>* detector, std::string hist_name, std::string hist_dir);
     void FillHistDetector2DGammaGamma(TH2F* hist2D, std::vector<Detector>* detector, std::string hist_name, std::string hist_dir);
@@ -209,8 +214,6 @@ private:
     std::vector<ParticleMC>* fTISTARFirstDeltaE[4];
     std::vector<ParticleMC>* fTISTARSecondDeltaE[2];
     std::vector<ParticleMC>* fTISTARPad[2];
-
-    
 
 };
 
