@@ -45,7 +45,10 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
             fSettings->SetTistarSettings(trex_settings);
         }
     }
-
+ 
+    for(int i=0; i<4; i++) fTISTARFirstDeltaE[i] = 0;
+    for(int i=0; i<2; i++) fTISTARSecondDeltaE[i] = 0;
+    for(int i=0; i<2; i++) fTISTARPad[i] = 0;
 
     // isn't f->GetListOfKeys()->Contains("graph") what you are looking for?
 
@@ -920,8 +923,8 @@ bool Converter::Run() {
             std::cout<<std::setw(3)<<100*i/nEntriesDet<<"% done - det loop\r"<<std::flush;
         }
         
+        fTISTARGenChain.GetEntry(i); 
         fTISTARDetChain.GetEntry(i);
-        fTISTARGenChain.GetEntry(i);
  
         if(fSettings->VerbosityLevel() >= 2) std::cout <<"Loop over entry Nr "<<i<<std::endl;
         hit->Clear();
