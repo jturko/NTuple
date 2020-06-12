@@ -2101,9 +2101,11 @@ bool Converter::Run() {
             fSceptarHit = false;
          
             // process TISTAR hits
+            if(fSettings->VerbosityLevel() > 1) PrintTistarVectors();
             // loop over all first-layer panels
             for(int panelNb = 0; panelNb < 4; panelNb++) {
                 ParticleMC part;
+                int nStripsAndRings = 0;
                 // loop over all strips that have been hit
                 for(size_t i = 0; i < fTISTARFirstLayerStripNb[panelNb].size(); i++) {
                     part.AddStrip(fTISTARFirstLayerStripNb[panelNb][i],         // strip number
@@ -2116,6 +2118,7 @@ bool Converter::Run() {
                                   fTISTARFirstLayerStripPos[panelNb][i].y(),    // y position
                                   fTISTARFirstLayerStripPos[panelNb][i].z(),    // z position
                                   fTISTARFirstLayerStripStopped[panelNb][i]);    // is stopped?
+                    nStripsAndRings++;
                 }
                 // loop over all rings that have been hit
                 for(size_t i = 0; i < fTISTARFirstLayerRingNb[panelNb].size(); i++) {
@@ -2126,12 +2129,17 @@ bool Converter::Run() {
                                   fTISTARFirstLayerRingTrackID[panelNb][i],     // trackID
                                   fTISTARFirstLayerRingTime[panelNb][i],        // time
                                   fTISTARFirstLayerRingStopped[panelNb][i]);    // is stopped?
+                    nStripsAndRings++;
                 }
-                fTISTARFirstDeltaE[panelNb]->push_back(part);
+                // only fill if we have at least one strip/ring activated
+                if(nStripsAndRings > 0) {
+                    fTISTARFirstDeltaE[panelNb]->push_back(part);
+                }
             }
             // loop over all second-layer panels
             for(int panelNb = 0; panelNb < 2; panelNb++) {
                 ParticleMC part;
+                int nStripsAndRings = 0;
                 // loop over all strips that have been hit
                 for(size_t i = 0; i < fTISTARSecondLayerStripNb[panelNb].size(); i++) {
                     part.AddStrip(fTISTARSecondLayerStripNb[panelNb][i],         // strip number
@@ -2144,6 +2152,7 @@ bool Converter::Run() {
                                   fTISTARSecondLayerStripPos[panelNb][i].y(),    // y position
                                   fTISTARSecondLayerStripPos[panelNb][i].z(),    // z position
                                   fTISTARSecondLayerStripStopped[panelNb][i]);    // is stopped?
+                    nStripsAndRings++;
                 }
                 // loop over all rings that have been hit
                 for(size_t i = 0; i < fTISTARSecondLayerRingNb[panelNb].size(); i++) {
@@ -2154,13 +2163,39 @@ bool Converter::Run() {
                                   fTISTARSecondLayerRingTrackID[panelNb][i],     // trackID
                                   fTISTARSecondLayerRingTime[panelNb][i],        // time
                                   fTISTARSecondLayerRingStopped[panelNb][i]);    // is stopped?
+                    nStripsAndRings++;
                 }
-                fTISTARSecondDeltaE[panelNb]->push_back(part);
+                if(nStripsAndRings > 0) {
+                    fTISTARSecondDeltaE[panelNb]->push_back(part);
+                }
             }
-   
+            hit->Clear();
+            ParticleBranch->clear();
+            Int_t silicon_mult_first = fTISTARFirstDeltaE[0]->size() + fTISTARFirstDeltaE[1]->size() + fTISTARFirstDeltaE[2]->size() + fTISTARFirstDeltaE[3]->size();
+            Int_t silicon_mult_second = fTISTARSecondDeltaE[0]->size()+ fTISTARSecondDeltaE[1]->size();
+            TVector3 firstposition;
+            TVector3 secondposition;
+        
+            Int_t index_first = 0;
+            Int_t index_second = 0;
+
+            if(silicon_mult_first > 1 || silicon_mult_second > 1) {
+                std::cout<<"Warning: Multiple hits in Silicon Tracker! "<<std::endl
+                         <<"First layer:  "<<silicon_mult_first<<" ( ";
+                for(auto dir : fTISTARFirstDeltaE) {
+                    std::cout<<dir->size()<<" ";
+                }
+                std::cout<<")  Second layer:  "<<silicon_mult_second<<" ( ";
+                for(auto dir : fTISTARSecondDeltaE) {
+                    std::cout<<dir->size()<<" ";
+                }
+                std::cout<<")"<<std::endl;
+            }
+
             ClearTistarVectors();
             ClearParticleMC();
         }
+
         if(fSettings->VerbosityLevel() > 1) {
             std::cout<<"Entry: "<<i<<", Event: "<<fEventNumber<<", Track: "<<fTrackID<<", Det: "<<fDetNumber<<", Cry: "
                      <<fCryNumber<<", Edep: "<<fDepEnergy<<"keV, ParticleID: "<<fParticleType<<", (x,y,z) = ("
@@ -3320,6 +3355,31 @@ void Converter::ClearTistarVectors() {
         fTISTARSecondLayerRingTime[i].clear();
         fTISTARSecondLayerRingStopped[i].clear();
     }
+}
+
+void Converter::PrintTistarVectors() {
+        for(int panel = 0; panel < 4; panel++) {
+            std::cout<<"layer: 0, panel: "<<panel<<std::endl;
+            std::cout<<" -> strip nHits: "<<int(fTISTARFirstLayerStripNb[panel].size())<<std::endl;
+            for(size_t i = 0; i < fTISTARFirstLayerStripNb[panel].size(); i++) {
+                std::cout<<" ---> hit: "<<i<<", edep: "<<fTISTARFirstLayerStripEnergy[panel][i]<<", strip: "<<fTISTARFirstLayerStripNb[panel][i]<<std::endl;
+            }
+            std::cout<<" -> ring nHits: "<<int(fTISTARFirstLayerRingNb[panel].size())<<std::endl;
+            for(size_t i = 0; i < fTISTARFirstLayerRingNb[panel].size(); i++) {
+                std::cout<<" ---> hit: "<<i<<", edep: "<<fTISTARFirstLayerRingEnergy[panel][i]<<", ring: "<<fTISTARFirstLayerRingNb[panel][i]<<std::endl;
+            }
+        }
+        for(int panel = 0; panel < 2; panel++) {
+            std::cout<<"layer: 2, panel: "<<panel<<std::endl;
+            std::cout<<" -> strip nHits: "<<int(fTISTARSecondLayerStripNb[panel].size())<<std::endl;
+            for(size_t i = 0; i < fTISTARSecondLayerStripNb[panel].size(); i++) {
+                std::cout<<" ---> hit: "<<i<<", edep: "<<fTISTARSecondLayerStripEnergy[panel][i]<<", strip: "<<fTISTARSecondLayerStripNb[panel][i]<<std::endl;
+            }
+            std::cout<<" -> ring nHits: "<<int(fTISTARSecondLayerRingNb[panel].size())<<std::endl;
+            for(size_t i = 0; i < fTISTARSecondLayerRingNb[panel].size(); i++) {
+                std::cout<<" ---> hit: "<<i<<", edep: "<<fTISTARSecondLayerRingEnergy[panel][i]<<", ring: "<<fTISTARSecondLayerRingNb[panel][i]<<std::endl;
+            }
+        }
 }
 
 void Converter::CreateTistarHistograms(Kinematics * transferP) {

@@ -70,6 +70,8 @@ private:
     int CalculateRingNumber (int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim);
     void CreateTistarHistograms(Kinematics*);
     void ClearParticleMC();
+    void ClearTistarVectors();
+    void PrintTistarVectors();
 
     void PrintStatistics();
 
@@ -95,8 +97,6 @@ private:
     double transX(double x, double y, double z, double theta, double phi);
     double transY(double x, double y, double z, double theta, double phi);
     double transZ(double x, double y, double z, double theta, double phi);
-
-    void ClearTistarVectors();
 
     Settings* fSettings;
     TChain fChain;
@@ -257,8 +257,6 @@ private:
     std::vector<int>        fTISTARSecondLayerRingTrackID[2];
     std::vector<double>     fTISTARSecondLayerRingTime[2];
     std::vector<int>        fTISTARSecondLayerRingStopped[2];
-
-    
 
 };
 
