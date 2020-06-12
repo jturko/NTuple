@@ -2,6 +2,8 @@
 #define __CONVERTER_HH
 
 #include <vector>
+#include <utility>
+#include <map>
 
 #include "TChain.h"
 #include "TFile.h"
@@ -66,6 +68,8 @@ private:
     // TI-STAR
     int CalculateStripNumber(int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim);
     int CalculateRingNumber (int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim);
+    void CreateTistarHistograms(Kinematics*);
+    void ClearParticleMC();
 
     void PrintStatistics();
 
@@ -75,8 +79,6 @@ private:
     TH2F* Get2DHistogram(std::string, std::string);
     //TH3I* Get3DHistogram(std::string, std::string);
     THnSparseF* GetNDHistogram(std::string, std::string);
-
-    void CreateTistarHistograms(Kinematics*);
 
     void FillHistDetector1DGamma(TH1F* hist1D, std::vector<Detector>* detector, std::string hist_name, std::string hist_dir);
     void FillHistDetector2DGammaGamma(TH2F* hist2D, std::vector<Detector>* detector, std::string hist_name, std::string hist_dir);
@@ -93,6 +95,8 @@ private:
     double transX(double x, double y, double z, double theta, double phi);
     double transY(double x, double y, double z, double theta, double phi);
     double transZ(double x, double y, double z, double theta, double phi);
+
+    void ClearTistarVectors();
 
     Settings* fSettings;
     TChain fChain;
@@ -136,6 +140,8 @@ private:
     Double_t fPosy;
     Double_t fPosz;
     Double_t fTime;
+    Int_t    fTargetZ;
+    Double_t fTargetA;
 
     double LightOutput(double E, std::vector<double> & coeff) {
         return ( coeff[0]*E-coeff[1]*(1.-TMath::Exp(-1.0*coeff[2]*TMath::Power(E,coeff[3]))) );
@@ -214,6 +220,45 @@ private:
     std::vector<ParticleMC>* fTISTARFirstDeltaE[4];
     std::vector<ParticleMC>* fTISTARSecondDeltaE[2];
     std::vector<ParticleMC>* fTISTARPad[2];
+
+    // same trackers as in the TRex/TI-STAR sensitive detector
+    // as we loop over the ti-star hits, we will fill these, 
+    // then once the last hit/entry of the ntuple has been processed
+    // for that given event, we will fill the ParticleMC class and do
+    // the TI-STAR analysis
+    std::vector<int>        fTISTARFirstLayerStripNb[4];
+    std::vector<double>     fTISTARFirstLayerStripEnergy[4];
+    std::vector<int>        fTISTARFirstLayerStripA[4];
+    std::vector<int>        fTISTARFirstLayerStripZ[4];
+    std::vector<int>        fTISTARFirstLayerStripTrackID[4];
+    std::vector<double>     fTISTARFirstLayerStripTime[4];
+    std::vector<TVector3>   fTISTARFirstLayerStripPos[4]; // leila
+    std::vector<int>        fTISTARFirstLayerStripStopped[4];
+    std::vector<int>        fTISTARFirstLayerRingNb[4];
+    std::vector<double>     fTISTARFirstLayerRingEnergy[4];
+    std::vector<int>        fTISTARFirstLayerRingA[4];
+    std::vector<int>        fTISTARFirstLayerRingZ[4];
+    std::vector<int>        fTISTARFirstLayerRingTrackID[4];
+    std::vector<double>     fTISTARFirstLayerRingTime[4];
+    std::vector<int>        fTISTARFirstLayerRingStopped[4];
+    
+    std::vector<int>        fTISTARSecondLayerStripNb[2];
+    std::vector<double>     fTISTARSecondLayerStripEnergy[2];
+    std::vector<int>        fTISTARSecondLayerStripA[2];
+    std::vector<int>        fTISTARSecondLayerStripZ[2];
+    std::vector<int>        fTISTARSecondLayerStripTrackID[2];
+    std::vector<double>     fTISTARSecondLayerStripTime[2];
+    std::vector<TVector3>   fTISTARSecondLayerStripPos[2]; // leila
+    std::vector<int>        fTISTARSecondLayerStripStopped[2];
+    std::vector<int>        fTISTARSecondLayerRingNb[2];
+    std::vector<double>     fTISTARSecondLayerRingEnergy[2];
+    std::vector<int>        fTISTARSecondLayerRingA[2];
+    std::vector<int>        fTISTARSecondLayerRingZ[2];
+    std::vector<int>        fTISTARSecondLayerRingTrackID[2];
+    std::vector<double>     fTISTARSecondLayerRingTime[2];
+    std::vector<int>        fTISTARSecondLayerRingStopped[2];
+
+    
 
 };
 
