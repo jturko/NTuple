@@ -1409,7 +1409,9 @@ bool Converter::Run() {
 
         //if this entry is from the next event, we fill the tree with everything we've collected so far (after SupressGriffinion) and reset the vector(s)
         if((fEventNumber != eventNumber) && ((fSettings->SortNumberOfEvents()==0)||(fSettings->SortNumberOfEvents()>=eventNumber))) {
-            std::cout<<"-> Last hit of the event processed, adding to histograms..."<<std::endl;
+            if(fSettings->VerbosityLevel() > 1) {
+                std::cout<<"-> Last hit of the event processed, adding to histograms..."<<std::endl;
+            }
             // This method checks that all the "crystal" hits are unique, that is, they have different crystal and detector IDs.
             // If they have the same crystal and detector IDs, then we sum the energies together.
             // Normally the Geant4 simulation would sum energy deposits on the same volume, but if we ran the code in "step mode",
@@ -2097,13 +2099,73 @@ bool Converter::Run() {
             outsideTimeWindow.clear();
 
             fSceptarHit = false;
-            
+         
+            // process TISTAR hits
+            // loop over all first-layer panels
+            for(int panelNb = 0; panelNb < 4; panelNb++) {
+                ParticleMC part;
+                // loop over all strips that have been hit
+                for(size_t i = 0; i < fTISTARFirstLayerStripNb[panelNb].size(); i++) {
+                    part.AddStrip(fTISTARFirstLayerStripNb[panelNb][i],         // strip number
+                                  fTISTARFirstLayerStripEnergy[panelNb][i],     // energy
+                                  fTISTARFirstLayerStripA[panelNb][i],          // particle A
+                                  fTISTARFirstLayerStripZ[panelNb][i],          // particle Z
+                                  fTISTARFirstLayerStripTrackID[panelNb][i],    // trackID
+                                  fTISTARFirstLayerStripTime[panelNb][i],       // time
+                                  fTISTARFirstLayerStripPos[panelNb][i].x(),    // x position
+                                  fTISTARFirstLayerStripPos[panelNb][i].y(),    // y position
+                                  fTISTARFirstLayerStripPos[panelNb][i].z(),    // z position
+                                  fTISTARFirstLayerStripStopped[panelNb][i]);    // is stopped?
+                }
+                // loop over all rings that have been hit
+                for(size_t i = 0; i < fTISTARFirstLayerRingNb[panelNb].size(); i++) {
+                    part.AddRing(fTISTARFirstLayerRingNb[panelNb][i],           // ring number
+                                  fTISTARFirstLayerRingEnergy[panelNb][i],      // energy
+                                  fTISTARFirstLayerRingA[panelNb][i],           // particle A
+                                  fTISTARFirstLayerRingZ[panelNb][i],           // particle Z
+                                  fTISTARFirstLayerRingTrackID[panelNb][i],     // trackID
+                                  fTISTARFirstLayerRingTime[panelNb][i],        // time
+                                  fTISTARFirstLayerRingStopped[panelNb][i]);    // is stopped?
+                }
+                fTISTARFirstDeltaE[panelNb]->push_back(part);
+            }
+            // loop over all second-layer panels
+            for(int panelNb = 0; panelNb < 2; panelNb++) {
+                ParticleMC part;
+                // loop over all strips that have been hit
+                for(size_t i = 0; i < fTISTARSecondLayerStripNb[panelNb].size(); i++) {
+                    part.AddStrip(fTISTARSecondLayerStripNb[panelNb][i],         // strip number
+                                  fTISTARSecondLayerStripEnergy[panelNb][i],     // energy
+                                  fTISTARSecondLayerStripA[panelNb][i],          // particle A
+                                  fTISTARSecondLayerStripZ[panelNb][i],          // particle Z
+                                  fTISTARSecondLayerStripTrackID[panelNb][i],    // trackID
+                                  fTISTARSecondLayerStripTime[panelNb][i],       // time
+                                  fTISTARSecondLayerStripPos[panelNb][i].x(),    // x position
+                                  fTISTARSecondLayerStripPos[panelNb][i].y(),    // y position
+                                  fTISTARSecondLayerStripPos[panelNb][i].z(),    // z position
+                                  fTISTARSecondLayerStripStopped[panelNb][i]);    // is stopped?
+                }
+                // loop over all rings that have been hit
+                for(size_t i = 0; i < fTISTARSecondLayerRingNb[panelNb].size(); i++) {
+                    part.AddRing(fTISTARSecondLayerRingNb[panelNb][i],           // ring number
+                                  fTISTARSecondLayerRingEnergy[panelNb][i],      // energy
+                                  fTISTARSecondLayerRingA[panelNb][i],           // particle A
+                                  fTISTARSecondLayerRingZ[panelNb][i],           // particle Z
+                                  fTISTARSecondLayerRingTrackID[panelNb][i],     // trackID
+                                  fTISTARSecondLayerRingTime[panelNb][i],        // time
+                                  fTISTARSecondLayerRingStopped[panelNb][i]);    // is stopped?
+                }
+                fTISTARSecondDeltaE[panelNb]->push_back(part);
+            }
+   
             ClearTistarVectors();
             ClearParticleMC();
         }
-        std::cout<<"Entry: "<<i<<", Event: "<<fEventNumber<<", Track: "<<fTrackID<<", Det: "<<fDetNumber<<", Cry: "<<fCryNumber<<", Edep: "<<fDepEnergy<<"keV, ParticleID: "<<fParticleType<<", (x,y,z) = ("
-                 <<fPosx<<", "<<fPosy<<", "<<fPosz<<" )"<<std::endl;
-
+        if(fSettings->VerbosityLevel() > 1) {
+            std::cout<<"Entry: "<<i<<", Event: "<<fEventNumber<<", Track: "<<fTrackID<<", Det: "<<fDetNumber<<", Cry: "
+                     <<fCryNumber<<", Edep: "<<fDepEnergy<<"keV, ParticleID: "<<fParticleType<<", (x,y,z) = ("
+                     <<fPosx<<", "<<fPosy<<", "<<fPosz<<" )"<<std::endl;
+        }
 
         // if fSystemID is NOT GRIFFIN, then set fCryNumber to zero
         // This is a quick fix to solve resolution and threshold values from Settings.cc
@@ -2120,7 +2182,7 @@ bool Converter::Run() {
             fCryNumber -= 1;
         }
 
-        // filter the TISTAR hits into ParticleMC format
+        // adding up ti-star hits (checking to see if we have more than 1 in a given strip/ring)
         if(fSystemID == 9500) {
             TVector3 particlePos = TVector3(fPosx, fPosy, fPosz);
             TVector3 stripPos = TVector3(fSettings->GetTistarSettings()->GetLayerPositionVector()[fDetNumber][fCryNumber]);
