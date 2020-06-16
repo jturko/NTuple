@@ -2094,14 +2094,23 @@ bool Converter::Run() {
             fTISTARLayer2->clear();            
             fTISTARLayer3->clear();            
 
-            eventNumber = fEventNumber;
             belowThreshold.clear();
             outsideTimeWindow.clear();
 
             fSceptarHit = false;
          
             // process TISTAR hits
-            if(fSettings->VerbosityLevel() > 1) PrintTistarVectors();
+            // get the entry corresponding to the event we just finished looping over
+            status = fTISTARGenChain.GetEntry(eventNumber); 
+            if(status == -1) {
+                std::cerr<<"Error occured, couldn't read entry "<<fEventNumber<<" from tree "<<fTISTARGenChain.GetName()<<" in file "<<
+                           fTISTARGenChain.GetFile()->GetName()<<std::endl;
+                continue;
+            } else if(status == 0) {
+                std::cerr<<"Error occured, entry "<<fEventNumber<<" in tree "<<fTISTARGenChain.GetName()<<" in file "<<
+                           fTISTARGenChain.GetFile()->GetName()<<" doesn't exist"<<std::endl;
+                return false;
+            }
             // loop over all first-layer panels
             for(int panelNb = 0; panelNb < 4; panelNb++) {
                 ParticleMC part;
@@ -2169,6 +2178,32 @@ bool Converter::Run() {
                     fTISTARSecondDeltaE[panelNb]->push_back(part);
                 }
             }
+        
+            for(int panel=0; panel<4; panel++) {
+                for(int hit=0; hit<fTISTARFirstDeltaE[panel]->size(); hit++) {
+                    hist1D = Get1DHistogram(Form("Layer1Panel%i_nStripZ",panel+1),"TISTAR1D");        
+                    hist1D->Fill( fTISTARFirstDeltaE[panel]->at(hit).GetStripNr().at(0) );
+                    hist1D = Get1DHistogram(Form("Layer1Panel%i_nStripY",panel+1),"TISTAR1D");        
+                    hist1D->Fill( fTISTARFirstDeltaE[panel]->at(hit).GetRingNr().at(0) );
+                    hist2D = Get2DHistogram(Form("Layer1Panel%i_nStripZ_vs_Z",panel+1),"TISTAR2D");        
+                    hist2D->Fill( fTISTARFirstDeltaE[panel]->at(hit).GetStripNr().at(0),fTISTARFirstDeltaE[panel]->at(hit).GetPosGlobalZ().at(0) );
+                    hist2D = Get2DHistogram(Form("Layer1Panel%i_nStripY_vs_Y",panel+1),"TISTAR2D");        
+                    hist2D->Fill( fTISTARFirstDeltaE[panel]->at(hit).GetRingNr().at(0),fTISTARFirstDeltaE[panel]->at(hit).GetPosGlobalY().at(0) );
+                }
+            }     
+            for(int panel=0; panel<2; panel++) {
+                for(int hit=0; hit<fTISTARSecondDeltaE[panel]->size(); hit++) {
+                    hist1D = Get1DHistogram(Form("Layer2Panel%i_nStripZ",panel+1),"TISTAR1D");        
+                    hist1D->Fill( fTISTARSecondDeltaE[panel]->at(hit).GetStripNr().at(0) );
+                    hist1D = Get1DHistogram(Form("Layer2Panel%i_nStripY",panel+1),"TISTAR1D");        
+                    hist1D->Fill( fTISTARSecondDeltaE[panel]->at(hit).GetRingNr().at(0) );
+                    hist2D = Get2DHistogram(Form("Layer2Panel%i_nStripZ_vs_Z",panel+1),"TISTAR2D");        
+                    hist2D->Fill( fTISTARSecondDeltaE[panel]->at(hit).GetStripNr().at(0),fTISTARSecondDeltaE[panel]->at(hit).GetPosGlobalZ().at(0) );
+                    hist2D = Get2DHistogram(Form("Layer2Panel%i_nStripY_vs_Y",panel+1),"TISTAR2D");        
+                    hist2D->Fill( fTISTARSecondDeltaE[panel]->at(hit).GetRingNr().at(0),fTISTARSecondDeltaE[panel]->at(hit).GetPosGlobalY().at(0) );
+                }
+            }     
+
             hit->Clear();
             ParticleBranch->clear();
             Int_t silicon_mult_first = fTISTARFirstDeltaE[0]->size() + fTISTARFirstDeltaE[1]->size() + fTISTARFirstDeltaE[2]->size() + fTISTARFirstDeltaE[3]->size();
@@ -2179,7 +2214,7 @@ bool Converter::Run() {
             Int_t index_first = 0;
             Int_t index_second = 0;
 
-            if(silicon_mult_first > 1 || silicon_mult_second > 1) {
+            if(fSettings->VerbosityLevel() > 0 && (silicon_mult_first > 1 || silicon_mult_second > 1)) {
                 std::cout<<"Warning: Multiple hits in Silicon Tracker! "<<std::endl
                          <<"First layer:  "<<silicon_mult_first<<" ( ";
                 for(auto dir : fTISTARFirstDeltaE) {
@@ -2192,8 +2227,103 @@ bool Converter::Run() {
                 std::cout<<")"<<std::endl;
             }
 
+            if(silicon_mult_first == 1 && (silicon_mult_second == 1 || isSolid)) { // begin mult = 1 events
+                if(fTISTARFirstDeltaE[0]->size() == 1 ) {
+                    fTISTARFirstDeltaE[0]->at(0).ID(0);
+                    hit->SetFirstDeltaE(fTISTARFirstDeltaE[0]->at(0), kForward);
+                    index_first = 0;
+                } else if(fTISTARFirstDeltaE[1]->size() == 1 ) {
+                    fTISTARFirstDeltaE[1]->at(0).ID(1);
+                    hit->SetFirstDeltaE(fTISTARFirstDeltaE[1]->at(0), kForward);
+                    index_first = 1;
+                } else if(fTISTARFirstDeltaE[2]->size() == 1 ) {
+                    fTISTARFirstDeltaE[2]->at(0).ID(2);
+                    hit->SetFirstDeltaE(fTISTARFirstDeltaE[2]->at(0), kBackward);
+                    index_first = 2;
+                } else {
+                    fTISTARFirstDeltaE[3]->at(0).ID(3);
+                    hit->SetFirstDeltaE(fTISTARFirstDeltaE[3]->at(0), kBackward);
+                    index_first = 3;
+                }
+
+                if(fTISTARSecondDeltaE[0]->size() == 1 ) {
+                    fTISTARSecondDeltaE[0]->at(0).ID(0);
+                    hit->SetSecondDeltaE(fTISTARSecondDeltaE[0]->at(0), kForward);
+                    index_second = 0;
+                } else if(fTISTARSecondDeltaE[1]->size() == 1) {
+                    fTISTARSecondDeltaE[1]->at(0).ID(1);
+                    hit->SetSecondDeltaE(fTISTARSecondDeltaE[1]->at(0), kForward);
+                    index_second = 1;
+                }
+
+                if(fSettings->VerbosityLevel() > 1) std::cout<<"index_first = "<<index_first<<", index_second = "<<index_second<<std::endl;
+
+                if(silicon_mult_second == 1) {
+                    if(fTISTARPad[index_second]->size() == 1 ) {
+                        hit->SetPad(fTISTARPad[index_second]->at(0));
+                    }
+
+                    if(fSettings->VerbosityLevel() > 1) {
+                        std::cout<<"Using pad "<<index_second<<" with "<<fTISTARPad[index_second]->size()<<" detectors"<<std::endl;
+                        for(int p = 0; p < 2; ++p) {
+                            for(size_t d = 0; d < fTISTARPad[p]->size(); ++d) {
+                                std::cout<<p<<": pad "<<fTISTARPad[p]->at(d).GetID()<<" = "<<fTISTARPad[p]->at(d).GetEdet()<<" keV / "<<fTISTARPad[p]->at(d).GetRear()<<" keV"<<std::endl;
+                            }
+                        }
+                    }
+                }
+
+                //get position of hit in first layer
+                firstposition = hit->FirstPosition(doubleSidedFirstLayer, !dontSmear);
+
+                // get position of hit in second layer
+                if(!isSolid) secondposition = hit->SecondPosition(!dontSmear);
+                else         secondposition.SetXYZ(0., 0., 0.);
+
+                part.Clear();
+            
+                // vector between two hits in Siliocn Tracker
+                if(isSolid) part.SetPosition(firstposition);
+                else        part.SetPosition(secondposition - firstposition);
+                if(fSettings->VerbosityLevel() > 1) {
+                    std::cout<<"Position to first hit: "<< firstposition.X()<<" "<<firstposition.Y()<<" "<<firstposition.Z()<<std::endl;
+                    std::cout<<"Position to second hit: "<< secondposition.X()<<" "<<secondposition.Y()<<" "<<secondposition.Z()<<std::endl;
+                    std::cout<<"Position of relative vector: "<< part.GetPosition().X()<<" "<<part.GetPosition().Y()<<" "<<part.GetPosition().Z()<<std::endl;
+                }
+        
+                // reaction angles
+                double recoilThetaSim = fTISTARGenRecoilTheta*180./TMath::Pi();
+                recoilThetaRec = part.GetPosition().Theta()*180./TMath::Pi();
+                double recoilPhiSim = fTISTARGenRecoilPhi*180./TMath::Pi();
+                recoilPhiRec = part.GetPosition().Phi()*180./TMath::Pi();
+                if(fSettings->VerbosityLevel() > 1) std::cout<<"reaction phi from position: "<<recoilPhiRec<<" - "<<recoilPhiSim<<" = "<<(recoilPhiRec - recoilPhiSim)<<std::endl;
+                if(fSettings->VerbosityLevel() > 1) std::cout<<"reaction theta from position: "<<recoilThetaRec<<" - "<<recoilThetaSim<<" = "<<(recoilThetaRec - recoilThetaSim)<<std::endl;
+    
+                TVector3 vertex;                   //reconstructed vertex
+                if(!isSolid) {
+                    //find the closest point between beam axis and vector of the two hits in the silicon tracker
+                    TVector3 r = part.GetPosition();  //relative vector from first hit to second hit
+                    TVector3 r2 = secondposition;     // vector to second hit
+                    double t = 0;                          //line parameter to calculate vertex; temp use only
+                    if((r*r - r.Z()*r.Z()) != 0 ) t = (r2*r - (r2.Z()*r.Z()))/(r*r - r.Z()*r.Z());
+                    vertex = r2 -( t*r);
+                } else {
+                    vertex.SetXYZ(0., 0., (targetForwardZ + targetBackwardZ)/2.); // middle of target
+                }
+                if(fSettings->VerbosityLevel() > 1) {
+                    std::cout<<"Calculated Vertex:\t"<<vertex.X()<<"\t"<<vertex.Y()<<"\t"<<vertex.Z()<<std::endl;
+                    std::cout<<"Simulated Vertex: \t"<<fTISTARGenReactionX<<"\t"<<fTISTARGenReactionY<<"\t"<<fTISTARGenReactionZ<<std::endl;
+                    //std::cout <<"Z from simu: "<< (fTISTARGenReactionZ)<<std::endl;
+                }
+
+            } // end mult = 1 events
+
             ClearTistarVectors();
             ClearParticleMC();
+            
+            // re-set this at the end, as we need the previous hit event number to get
+            // the correct entry in the generator tree
+            eventNumber = fEventNumber;
         }
 
         if(fSettings->VerbosityLevel() > 1) {
@@ -3370,7 +3500,7 @@ void Converter::PrintTistarVectors() {
             }
         }
         for(int panel = 0; panel < 2; panel++) {
-            std::cout<<"layer: 2, panel: "<<panel<<std::endl;
+            std::cout<<"layer: 1, panel: "<<panel<<std::endl;
             std::cout<<" -> strip nHits: "<<int(fTISTARSecondLayerStripNb[panel].size())<<std::endl;
             for(size_t i = 0; i < fTISTARSecondLayerStripNb[panel].size(); i++) {
                 std::cout<<" ---> hit: "<<i<<", edep: "<<fTISTARSecondLayerStripEnergy[panel][i]<<", strip: "<<fTISTARSecondLayerStripNb[panel][i]<<std::endl;

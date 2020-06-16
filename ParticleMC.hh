@@ -2,9 +2,11 @@
 #define __PARTICLEMC_HH
 
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include "TObject.h"
 #include "math.h"
+
 
 class ParticleMC : public TObject {
 	public:
@@ -161,6 +163,26 @@ class ParticleMC : public TObject {
 			result += fRingTime.size()*sizeof(double);
 			return result;
 		}
+
+        void Print() {
+            std::cout<<std::fixed<<std::setprecision(6);
+            std::cout<<"PRINTING ParticleMC ID = "<<fID<<std::endl;
+            // strips
+            std::cout<<"STRIPS:\tNumber\tEnergy\t\tA\tZ\tTrackID\t\tTime\t\tpos_x\t\tpos_y\t\tpos_z"<<std::endl;
+            for(size_t i=0; i<fStripNr.size(); i++) {
+                std::cout<<"\t"<<fStripNr[i]<<"\t"<<fStripEnergy[i]<<"\t"<<fStripA[i]<<"\t"<<fStripZ[i]<<"\t"<<fStripTrackID[i]
+                         <<"\t\t"<<fStripTime[i]<<"\t"<<fPosGlobalX[i]<<"\t"<<fPosGlobalY[i]<<"\t"<<fPosGlobalZ[i]<<std::endl;
+            }
+            // rings
+            std::cout<<"RINGS :\tNumber\tEnergy\t\tA\tZ\tTrackID\t\tTime"<<std::endl;
+            for(size_t i=0; i<fRingNr.size(); i++) {
+                std::cout<<"\t"<<fRingNr[i]<<"\t"<<fRingEnergy[i]<<"\t"<<fRingA[i]<<"\t"<<fRingZ[i]<<"\t"<<fRingTrackID[i]
+                         <<"\t\t"<<fRingTime[i]<<std::endl;
+            }
+            if(fA > 0) {
+                std::cout<<"PAD:  A="<<fA<<", Z="<<fZ<<", TrackID="<<fTrackID<<", Time="<<fTime<<", Edet="<<fEdet<<std::endl;
+            }
+        }
 
 	protected:
 		int fID;

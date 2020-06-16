@@ -55,7 +55,7 @@ TVector3 HitSim::FirstPosition(bool doubleSidedFirstLayer, bool smear) {
 	double x,y,z;
 
 	// quadrant
-	int quadr = fFirstDeltaE->GetID() - 1;
+	int quadr = fFirstDeltaE->GetID();
 	//std::cout<<" \n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! first layer no: "<< quadr << std::endl;
 
 	// strip number = perpendicular to beam direction
@@ -273,7 +273,7 @@ TVector3 HitSim::SecondPosition(bool smear) {
 	double x,y,z;
 
 	// quadrant
-	int quadr = fSecondDeltaE->GetID() - 1;   
+	int quadr = fSecondDeltaE->GetID();   
 	//std::cout<<" \n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! second layer no: "<< quadr << std::endl;                                                 
 
 	// strip number = strips perpendicular to beam direction
