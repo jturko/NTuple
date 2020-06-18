@@ -808,7 +808,9 @@ bool Converter::Run() {
     //Compound* chamberGasMat = new Compound(sett->GetVacuumChamberGas().c_str());
     if(fSettings->VerbosityLevel()) std::cout<<"creating compound \""<<"helium"<<"\""<<std::endl;
     Compound* chamberGasMat = new Compound("helium");
+    std::cout<<"Vaccum Chamber Gas Pressure : "<<sett->GetVacuumChamberGasPressure()<<std::endl;
     chamberGasMat->SetDensity(chamberGasMat->GetDensity()*sett->GetVacuumChamberGasPressure()/6.24151e+08); // internal geant4 units are such that 1 bar = 6.24151e+08 whatevers *** changed by Leila
+    std::cout<<"chamberGasMat density: "<<chamberGasMat->GetDensity()<<std::endl;
     Compound* layerMat = new Compound("silicon");
 
     // 1n transfer
@@ -1748,7 +1750,7 @@ bool Converter::Run() {
             Int_t index_first = 0;
             Int_t index_second = 0;
 
-            if(fSettings->VerbosityLevel() > 0 && (silicon_mult_first > 1 || silicon_mult_second > 1)) {
+            if(fSettings->VerbosityLevel() > 1 && (silicon_mult_first > 1 || silicon_mult_second > 1)) {
                 std::cout<<"Warning: Multiple hits in Silicon Tracker! "<<std::endl
                          <<"First layer:  "<<silicon_mult_first<<" ( ";
                 for(auto dir : fTISTARFirstDeltaE) {
@@ -1796,8 +1798,6 @@ bool Converter::Run() {
                     index_second = 1;
                 }
 
-                if(fSettings->VerbosityLevel() > 1) std::cout<<"index_first = "<<index_first<<", index_second = "<<index_second<<std::endl;
-
                 if(silicon_mult_second == 1) {
                     if(fTISTARPad[index_second]->size() == 1 ) {
                         hit->SetPad(fTISTARPad[index_second]->at(0));
@@ -1831,10 +1831,10 @@ bool Converter::Run() {
                     std::cout<<"Position of relative vector: "<< part.GetPosition().X()<<" "<<part.GetPosition().Y()<<" "<<part.GetPosition().Z()<<std::endl;
                 }
         
-                if(firstposition == secondposition) {
-                    std::cout<<"firstposition == secondposition, continue..."<<std::endl;
-                    continue;
-                }
+                // error w/ inf's come up when both first/second position are 
+                // calculated as (0,0,0) so we just skip them for now...
+                if(firstposition == secondposition)  continue;
+            
 
                 // reaction angles
                 double recoilThetaSim = fTISTARGenRecoilTheta*180./TMath::Pi();
@@ -1855,6 +1855,10 @@ bool Converter::Run() {
                 } else {
                     vertex.SetXYZ(0., 0., (targetForwardZ + targetBackwardZ)/2.); // middle of target
                 }
+                // forcing x/y of vertex to be zero
+                vertex.SetX(0.);
+                vertex.SetY(0.);
+                
                 if(fSettings->VerbosityLevel() > 1) {
                     std::cout<<"Calculated Vertex:\t"<<vertex.X()<<"\t"<<vertex.Y()<<"\t"<<vertex.Z()<<std::endl;
                     std::cout<<"Simulated Vertex: \t"<<fTISTARGenReactionX<<"\t"<<fTISTARGenReactionY<<"\t"<<fTISTARGenReactionZ<<std::endl;
@@ -1891,9 +1895,10 @@ bool Converter::Run() {
                 recoilEnergyRecErest =  hit->GetPadEnergy();
                 recoilEnergyRec = recoilEnergyRecdE + recoilEnergyRecErest;
                 //recoilEnergyRec =  recoilEnergyRecErest;
-                // if(fSettings->VerbosityLevel() && index_first == 0 && index_second == 0)  std::cout<<" 1. layer energy: "<<hit->GetFirstDeltaEEnergy()<<" .. "<<endl;
-                if(fSettings->VerbosityLevel()>1) std::cout<<" 1. layer energy: "<<hit->GetFirstDeltaEEnergy()<<" 2. layer energy: "<<hit->GetSecondDeltaEEnergy()<<" pad energy: "<<hit->GetPadEnergy()
-                                                           <<" => dE: "<<recoilEnergyRecdE<<", Erest: "<<recoilEnergyRecErest<<" => Erec: "<<recoilEnergyRec<<std::endl;
+                if(fSettings->VerbosityLevel()>1) { 
+                    std::cout<<" 1. layer energy: "<<hit->GetFirstDeltaEEnergy()<<" 2. layer energy: "<<hit->GetSecondDeltaEEnergy()<<" pad energy: "<<hit->GetPadEnergy()
+                             <<" => dE: "<<recoilEnergyRecdE<<", Erest: "<<recoilEnergyRecErest<<" => Erec: "<<recoilEnergyRec<<std::endl;
+                }
                 // reconstruct energy loss in gas and foil
                 double sinTheta = TMath::Sin(recoilThetaRec/180.*TMath::Pi());
                 double cosTheta = TMath::Cos(recoilThetaRec/180.*TMath::Pi());
@@ -1919,13 +1924,16 @@ bool Converter::Run() {
                     if(recoilEnergyRecErest > 0. ) {
                         if(fSettings->VerbosityLevel()>1) std::cout<<"\n\n *** energy loss through the pad *** "<<std::endl;
 
-                        if(fSettings->VerbosityLevel()>1) std::cout<<"from pad "<<recoilEnergyRecErest<<" through "<<(padDistance - secondLayerDistance)/(sinTheta*cosPhi)<<" mm gas \n";
+                        if(fSettings->VerbosityLevel()>1) {
+                            std::cout<<"gas thickness: (padDistance - secondLayerDistance)/(sinTheta * cosPhi)"<<std::endl;
+                            std::cout<<"gas thickness: ("<<padDistance<<" - "<<secondLayerDistance<<")/("<<sinTheta<<" * "<<cosPhi<<")"<<std::endl;
+                            std::cout<<"from pad "<<recoilEnergyRecErest<<" through "<<(padDistance - secondLayerDistance)/(sinTheta*cosPhi)<<" mm gas \n";
+                        }
                         range = recoilChamberGasRange->Eval(recoilEnergyRecErest);
 
                         if(fSettings->VerbosityLevel()>1) std::cout<<"1. range from the pad Erest "<<range<<std::endl;
 
                         dE2ElossRange = recoilLayerRange->Eval(recoilChamberGasEnergy->Eval(range + thirdGasLayerThicknessMgCm2/(sinTheta*cosPhi)));
-                        //if(fSettings->VerbosityLevel()>1) std::cout<<"5.a second layer thickness: "<<sett->GetSecondFBarrelDeltaESingleThickness()[0]<<" range of the second layer: "<<dE2ElossRange<<std::endl;
                         if(fSettings->VerbosityLevel()>1) std::cout<<"5.a second layer thickness: "<<sett->GetLayerDimensionVector()[1][0].x()<<" range of the second layer: "<<dE2ElossRange<<std::endl;
                         dE2Eloss = recoilLayerEnergy->Eval(dE2ElossRange + secondLayerThicknessMgCm2/(sinTheta*cosPhi)) - recoilChamberGasEnergy->Eval(range + thirdGasLayerThicknessMgCm2/(sinTheta*cosPhi));
                         dE2MeasMinRec = TMath::Abs(hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1) - dE2Eloss);
@@ -1936,92 +1944,114 @@ bool Converter::Run() {
                         Get1DHistogram("hdE2Measured","TistarAnalysis")->Fill(hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()-1));
                         Get2DHistogram("hdE2ElossVsMeasuredWoEpad0","TistarAnalysis")->Fill(dE2Eloss,hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()-1));
 
-                        //if(fSettings->VerbosityLevel()>1) std::cout<<"5.b second layer thickness: "<<sett->GetSecondFBarrelDeltaESingleThickness()[0]<<" range of the second layer: "<<dE2ElossRange<<" energi loss "<<dE2Eloss<<" the measured energy: "<<hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" total: "<<dE2MeasuredCorr<<std::endl;         
-
                         recoilEnergyRecEloss = recoilChamberGasEnergy->Eval(range + thirdGasLayerThicknessMgCm2/(sinTheta*cosPhi)) + hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1);
 
-                        if(fSettings->VerbosityLevel()>1) std::cout<<"2. energy loss from the pad + de2 "<<recoilEnergyRecEloss<<std::endl;
+                        if(fSettings->VerbosityLevel()>1) {
+                            std::cout<<"2. energy loss from the pad + de2 "<<recoilEnergyRecEloss<<std::endl;
+                        }
                         range = recoilChamberGasRange->Eval(recoilEnergyRecEloss);
-                        if(fSettings->VerbosityLevel()>1) std::cout<<"3. range from the pad Eloss "<<range<<std::endl;
+                        if(fSettings->VerbosityLevel()>1) {
+                            std::cout<<"3. range from the pad Eloss "<<range<<std::endl;
+                        }
 
                         Get1DHistogram("hErestMeasured","TistarAnalysis")->Fill(hit->GetPadEnergy());
                     }
                     else {
                         range = recoilChamberGasRange->Eval(hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1));
-                        if(fSettings->VerbosityLevel()>1) std::cout<<"\n range from dE2 for Erest=0 "<<range<<std::endl;
+                        if(fSettings->VerbosityLevel()>1) {
+                            std::cout<<"\n range from dE2 for Erest=0 "<<range<<std::endl;
+                        }
                         dE2ElossRange = recoilLayerRange->Eval(range);
                         dE2Eloss = recoilLayerEnergy->Eval(dE2ElossRange + secondLayerThicknessMgCm2/(sinTheta*cosPhi)) - recoilChamberGasEnergy->Eval(range);
                         Get2DHistogram("hdE2ElossVsMeasured","TistarAnalysis")->Fill(dE2Eloss,hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1));
                     }
 
-                    ////*** energy loss through the second layer ***  
-                    ////if(recoilEnergyRecErest == 0. ) {
-                    //dE1ElossRange = recoilLayerRange->Eval(recoilChamberGasEnergy->Eval(range + secondGasLayerThicknessMgCm2/(sinTheta*cosPhi)));
-                    ////if(fSettings->VerbosityLevel()>1) std::cout<<"7.a first layer thickness: "<<sett->GetFBarrelDeltaESingleThickness()[0]<<" range of the first layer: "<<dE1ElossRange<<std::endl;
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"7.a first layer thickness: "<<sett->GetLayerDimensionVector()[0][0].x()<<" range of the first layer: "<<dE1ElossRange<<std::endl;
-                    //dE1Eloss = recoilLayerEnergy->Eval(dE1ElossRange + firstLayerThicknessMgCm2/(sinTheta*cosPhi)) - recoilChamberGasEnergy->Eval(range + secondGasLayerThicknessMgCm2/(sinTheta*cosPhi));
-                    //dE1MeasMinRec = TMath::Abs(hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1) - dE1Eloss);
-                    //Get1DHistogram("hdE1ElossRange","TistarAnalysis")->Fill(dE1ElossRange);
-                    //Get1DHistogram("hdE1Eloss","TistarAnalysis")->Fill(dE1Eloss);
-                    //Get1DHistogram("hdE1Measured","TistarAnalysis")->Fill(hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1));
-                    //Get1DHistogram("hdE1MeasMinRec","TistarAnalysis")->Fill(hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1) - dE1Eloss);
-                    //Get2DHistogram("hdE1ElossVsMeasured","TistarAnalysis")->Fill(dE1Eloss,hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1));
-                    //if(recoilEnergyRecErest == 0.) Get2DHistogram("hdE1ElossVsMeasuredEpad0","TistarAnalysis")->Fill(dE1Eloss,hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1));
-                    //if(recoilEnergyRecErest > 0.)  Get2DHistogram("hdE1ElossVsMeasuredEpadWo0","TistarAnalysis")->Fill(dE1Eloss,hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1));
-                    //
-                    ////if(fSettings->VerbosityLevel()>1) std::cout<<"7.b first layer thickness: "<<sett->GetFBarrelDeltaESingleThickness()[0]<<" range of the first layer: "<<dE1ElossRange<<" energi loss "<<dE1Eloss<<" the measured energy: "<<hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" total: "<<dE1MeasuredCorr<<std::endl;
-                    ////}
+                    //*** energy loss through the second layer ***  
+                    dE1ElossRange = recoilLayerRange->Eval(recoilChamberGasEnergy->Eval(range + secondGasLayerThicknessMgCm2/(sinTheta*cosPhi)));
+                    if(fSettings->VerbosityLevel()>1) std::cout<<"7.a first layer thickness: "<<sett->GetLayerDimensionVector()[0][0].x()<<" range of the first layer: "<<dE1ElossRange<<std::endl;
+                    dE1Eloss = recoilLayerEnergy->Eval(dE1ElossRange + firstLayerThicknessMgCm2/(sinTheta*cosPhi)) - recoilChamberGasEnergy->Eval(range + secondGasLayerThicknessMgCm2/(sinTheta*cosPhi));
+                    dE1MeasMinRec = TMath::Abs(hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1) - dE1Eloss);
+                    Get1DHistogram("hdE1ElossRange","TistarAnalysis")->Fill(dE1ElossRange);
+                    Get1DHistogram("hdE1Eloss","TistarAnalysis")->Fill(dE1Eloss);
+                    Get1DHistogram("hdE1Measured","TistarAnalysis")->Fill(hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1));
+                    Get1DHistogram("hdE1MeasMinRec","TistarAnalysis")->Fill(hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1) - dE1Eloss);
+                    Get2DHistogram("hdE1ElossVsMeasured","TistarAnalysis")->Fill(dE1Eloss,hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1));
+                    if(recoilEnergyRecErest == 0.) Get2DHistogram("hdE1ElossVsMeasuredEpad0","TistarAnalysis")->Fill(dE1Eloss,hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1));
+                    if(recoilEnergyRecErest > 0.)  Get2DHistogram("hdE1ElossVsMeasuredEpadWo0","TistarAnalysis")->Fill(dE1Eloss,hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1));
 
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"7.b first layer thickness: "<<sett->GetLayerDimensionVector()[0][0].x()<<" range of the first layer: "<<dE1ElossRange<<" energi loss "<<dE1Eloss<<" the measured energy: "<<hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" total: "<<dE1MeasuredCorr<<std::endl;
+                    if(fSettings->VerbosityLevel()>1) {
+                        std::cout<<"7.b first layer thickness: "<<sett->GetLayerDimensionVector()[0][0].x()<<" range of the first layer: "<<dE1ElossRange
+                                 <<" energi loss "<<dE1Eloss<<" the measured energy: "<<hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1)
+                                 <<" total: "<<dE1MeasuredCorr<<std::endl;
+                        std::cout<<"\n\n *** energy loss through the second layer *** "<<std::endl;
+                        std::cout<<" with 2. layer "<<hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" ("<<recoilEnergyRecEloss
+                                 <<") through "<<(secondLayerDistance - firstLayerDistance)/(sinTheta*cosPhi)<<" mm gas \n";
+                        std::cout<<"4. range from the pad or second layer "<<range<<std::endl;
+                    }
 
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"\n\n *** energy loss through the second layer *** "<<std::endl;
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<" with 2. layer "<<hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" ("<<recoilEnergyRecEloss<<") through "<<(secondLayerDistance - firstLayerDistance)/(sinTheta*cosPhi)<<" mm gas \n";
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"4. range from the pad or second layer "<<range<<std::endl;
 
-                    //recoilEnergyRecEloss = recoilChamberGasEnergy->Eval(range + secondGasLayerThicknessMgCm2/(sinTheta*cosPhi)) + hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1);
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"5. energy loss from the second layer + de1 "<<recoilEnergyRecEloss<<std::endl;
+                    recoilEnergyRecEloss = recoilChamberGasEnergy->Eval(range + secondGasLayerThicknessMgCm2/(sinTheta*cosPhi)) + hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1);
+                    if(fSettings->VerbosityLevel()>1) {
+                        std::cout<<"5. energy loss from the second layer + de1 "<<recoilEnergyRecEloss<<std::endl;
+                    }
 
                     // for now the foil is box-shaped as well, so we can just continue the same way
 
-                    ////*** energy loss through the first layer ***
+                    //*** energy loss through the first layer ***
+                    if(fSettings->VerbosityLevel()>1) {
+                        std::cout<<"\n\n *** energy loss through the first layer *** "<<std::endl;
+                        std::cout<<" with 1. layer "<<hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" ("<<recoilEnergyRecEloss<<") through "<<(firstLayerDistance - foilDistance)/(sinTheta*cosPhi)<<" mm gas \n";
+                    }
+                    range = recoilChamberGasRange->Eval(recoilEnergyRecEloss);
 
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"\n\n *** energy loss through the first layer *** "<<std::endl;
+                    if(fSettings->VerbosityLevel()>1) {
+                        std::cout<<"6. range from the pad or second layer "<<range<<std::endl;
+                    }
+                    //recoilEnergyRecEloss = recoilChamberGasEnergy->Eval(range + firstGasLayerThicknessMgCm2/(sinTheta*cosPhi)); // original
+                    recoilEnergyRecEloss = recoilChamberGasEnergy->Eval(range + (targetWidthMgCm2*(1 - cosPhi) + 100.*chamberGasMat->GetDensity()*(firstLayerDistance - foilDistance)/(sinTheta*cosPhi))); 
+                    // changed by Leila: effectiveLength(firstLayer - vertex)/sinTheta*cosPhi - targetRadii/sinTheta = a0/sinTheta*cosPhi - Rt/sinTheta 
 
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<" with 1. layer "<<hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" ("<<recoilEnergyRecEloss<<") through "<<(firstLayerDistance - foilDistance)/(sinTheta*cosPhi)<<" mm gas \n";
-                    //range = recoilChamberGasRange->Eval(recoilEnergyRecEloss);
+                    if(fSettings->VerbosityLevel()>1) {
+                        std::cout<<"7. energy loss from the first layer "<<recoilEnergyRecEloss<<std::endl;
+                    }
 
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"6. range from the pad or second layer "<<range<<std::endl;
-                    ////recoilEnergyRecEloss = recoilChamberGasEnergy->Eval(range + firstGasLayerThicknessMgCm2/(sinTheta*cosPhi)); // original
-                    //recoilEnergyRecEloss = recoilChamberGasEnergy->Eval(range + (targetWidthMgCm2*(1 - cosPhi) + 100.*chamberGasMat->GetDensity()*(firstLayerDistance - foilDistance)/(sinTheta*cosPhi))); // changed by Leila: effectiveLength(firstLayer - vertex)/sinTheta*cosPhi - targetRadii/sinTheta = a0/sinTheta*cosPhi - Rt/sinTheta 
+                    //*** energy loss through the foil ***
+                    if(fSettings->VerbosityLevel()>1) {
+                        std::cout<<"\n\n *** energy loss through the foil *** "<<std::endl;
+                        std::cout<<" at "<<recoilEnergyRecEloss<<" through "<<foilThicknessMgCm2/(sinTheta*cosPhi)<<" mm foil \n";
+                    }
+                    range = recoilFoilRange->Eval(recoilEnergyRecEloss);
 
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"7. energy loss from the first layer "<<recoilEnergyRecEloss<<std::endl;
+                    if(fSettings->VerbosityLevel()>1) {
+                        std::cout<<"8. range from the foil "<<range<<std::endl;
+                    }
+                    //recoilEnergyRecEloss = recoilFoilEnergy->Eval(range + foilThicknessMgCm2/(sinTheta*cosPhi));// original 
+                    recoilEnergyRecEloss = recoilFoilEnergy->Eval(range + foilThicknessMgCm2/(sinTheta));// changed by Leila
 
-                    ////*** energy loss through the foil ***
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"\n\n *** energy loss through the foil *** "<<std::endl;
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<" at "<<recoilEnergyRecEloss<<" through "<<foilThicknessMgCm2/(sinTheta*cosPhi)<<" mm foil \n";
-                    //range = recoilFoilRange->Eval(recoilEnergyRecEloss);
-
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"8. range from the foil "<<range<<std::endl;
-                    ////recoilEnergyRecEloss = recoilFoilEnergy->Eval(range + foilThicknessMgCm2/(sinTheta*cosPhi));// original 
-                    //recoilEnergyRecEloss = recoilFoilEnergy->Eval(range + foilThicknessMgCm2/(sinTheta));// changed by Leila
-
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"9. energy loss from the foil "<<recoilEnergyRecEloss<<std::endl;
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"\n recoilEnergyRec: "<<recoilEnergyRec<<", range: "<<range<<" + foilThicknessMgCm2/(sinTheta*cosPhi) "<<foilThicknessMgCm2/(sinTheta)<<" => recoilEnergyRecEloss: "<<recoilEnergyRecEloss<<std::endl;
+                    if(fSettings->VerbosityLevel()>1) {
+                        std::cout<<"9. energy loss from the foil "<<recoilEnergyRecEloss<<std::endl;
+                        std::cout<<"\n recoilEnergyRec: "<<recoilEnergyRec<<", range: "<<range<<" + foilThicknessMgCm2/(sinTheta*cosPhi) "
+                                 <<foilThicknessMgCm2/(sinTheta)<<" => recoilEnergyRecEloss: "<<recoilEnergyRecEloss<<std::endl;
+                    }
             
-                    ////*** energy loss through the target ***
-                    //// for now assume that the "box" inside the foil is filled with target gas. Not box any more. It is a cylinder --> phi is ommitted!
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"\n\n *** energy loss through the target *** "<<std::endl;
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<" at "<<recoilEnergyRecEloss<<" through "<<targetWidthMgCm2/(sinTheta*cosPhi)<<" mm gas \n";
-                    //range = recoilTargetRange->Eval(recoilEnergyRecEloss);
+                    //*** energy loss through the target ***
+                    // for now assume that the "box" inside the foil is filled with target gas. Not box any more. It is a cylinder --> phi is ommitted!
+                    if(fSettings->VerbosityLevel()>1) {
+                        std::cout<<"\n\n *** energy loss through the target *** "<<std::endl;
+                        std::cout<<" at "<<recoilEnergyRecEloss<<" through "<<targetWidthMgCm2/(sinTheta*cosPhi)<<" mm gas \n";
+                    }
+                    range = recoilTargetRange->Eval(recoilEnergyRecEloss);
 
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"10. range from the target "<<range<<std::endl;
-                    ////std::cout<<recoilEnergyRecEloss<<", "<<range<<" + "<<targetWidthMgCm2/(sinTheta*cosPhi);
-                    ////recoilEnergyRecEloss = recoilTargetEnergy->Eval(range + targetWidthMgCm2/(sinTheta*cosPhi));// original
-                    //recoilEnergyRecEloss = recoilTargetEnergy->Eval(range + targetWidthMgCm2/(sinTheta));// changed by Leila
+                    if(fSettings->VerbosityLevel()>1) {
+                        std::cout<<"10. range from the target "<<range<<std::endl;
+                    }
+                    //recoilEnergyRecEloss = recoilTargetEnergy->Eval(range + targetWidthMgCm2/(sinTheta*cosPhi));// original
+                    recoilEnergyRecEloss = recoilTargetEnergy->Eval(range + targetWidthMgCm2/(sinTheta));// changed by Leila
 
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<"11. energy loss from the target "<<recoilEnergyRecEloss<<std::endl;
-                    ////std::cout<<" => "<<recoilEnergyRecEloss<<std::endl;
-                    //if(fSettings->VerbosityLevel()>1) std::cout<<" => "<<recoilEnergyRecEloss<<std::endl;
+                    if(fSettings->VerbosityLevel()>1) {
+                        std::cout<<"11. energy loss from the target "<<recoilEnergyRecEloss<<std::endl;
+                        std::cout<<" => "<<recoilEnergyRecEloss<<std::endl;
+                    }
 
 
                 } // end gas target
@@ -2066,7 +2096,7 @@ bool Converter::Run() {
             int stripNumber, ringNumber;
             switch(fDetNumber) {
                 size_t j;
-                case 0: // first layer - pixelated w/ 4 strips
+                case 0: // first layer - pixelated w/ 4 panels
                     // strip calculations
                     stripNumber = CalculateStripNumber(fDetNumber, particlePos, stripPos, stripDim);
                     for(j = 0; j < fTISTARFirstLayerStripNb[fCryNumber].size(); j++) { // checking to see if this strip is already activated
@@ -2104,7 +2134,7 @@ bool Converter::Run() {
                     }
                     break;
     
-                case 1: // second layer - pixelated w/ 2 strips
+                case 1: // second layer - pixelated w/ 2 panels
                     // strip calculations
                     stripNumber = CalculateStripNumber(fDetNumber, particlePos, stripPos, stripDim);
                     for(j = 0; j < fTISTARSecondLayerStripNb[fCryNumber].size(); j++) { // checking to see if this strip is already activated
@@ -2142,7 +2172,7 @@ bool Converter::Run() {
                     }
                     break;
 
-                case 2: // third (pad) layer - not pixelated 
+                case 2: // third (pad) layer - not pixelated, 2 panels
                     // here we can directly create and add the new ParticleMC
                     ParticleMC part;
                     part.SetEdet(fDepEnergy);
