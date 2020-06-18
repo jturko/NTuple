@@ -104,40 +104,45 @@ TVector3 HitSim::FirstPosition(bool doubleSidedFirstLayer, bool smear) {
 	    //y       +dtb    -pos    -dtb    +pos
     	
     
-	    x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
-	    y = fSecondPosition.Y()*fTRexSett->GetLayerPositionVector()[0][quadr].y()/fTRexSett->GetLayerPositionVector()[1][quadr].y();
-	   // switch(quadr) {
-	   // case 0:
-	   //   x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
-	   //   y = fSecondPosition.X()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();
-	   //   break; 
-	   //   
-	   //   // exchange case1 and case 2 because it is not any more box shape, just top (0) and bottom (0) Leila 
-	   //   
-	   // case 1:
-	   //   /*x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
-	   //   y = fSecondPosition.Y()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x(); original*/
-	   //   
-	   //   x = fTRexSett->GetLayerPositionVector()[0][quadr].x(); // changed by Leila	      	      
-	   //   y = fSecondPosition.X()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();
-	   //   break;
-	   //   
-	   // case 2:
-	   //   /*x = fSecondPosition.X()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();
-	   //   y = -fTRexSett->GetLayerPositionVector()[0][quadr].x(); original */
-	   //   
-	   //   x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
-	   //   y = fSecondPosition.Y()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();// changed by Leila
-	   //   break;
-	   //   
-	   // case 3:
-	   //   x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
-	   //   y = fSecondPosition.Y()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();
-	   //   break;
-	   //   
-	   // default:
-	   //   break;
-	   // }
+        // assuming the strips in the first layer run perpindicular to the beam axis (up/down in the y-dir)
+        // therefore we take the y-position as the center of the strip
+        y = fTRexSett->GetLayerPositionVector()[0][quadr].y();
+
+        // the x-position should just be the distance to the beam
+        x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
+
+	    //switch(quadr) {
+	    //case 0:
+	    //  x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
+	    //  y = fSecondPosition.X()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();
+	    //  break; 
+	    //  
+	    //  // exchange case1 and case 2 because it is not any more box shape, just top (0) and bottom (0) Leila 
+	    //  
+	    //case 1:
+	    //  /*x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
+	    //  y = fSecondPosition.Y()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x(); original*/
+	    //  
+	    //  x = fTRexSett->GetLayerPositionVector()[0][quadr].x(); // changed by Leila	      	      
+	    //  y = fSecondPosition.X()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();
+	    //  break;
+	    //  
+	    //case 2:
+	    //  /*x = fSecondPosition.X()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();
+	    //  y = -fTRexSett->GetLayerPositionVector()[0][quadr].x(); original */
+	    //  
+	    //  x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
+	    //  y = fSecondPosition.Y()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();// changed by Leila
+	    //  break;
+	    //  
+	    //case 3:
+	    //  x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
+	    //  y = fSecondPosition.Y()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr].x();
+	    //  break;
+	    //  
+	    //default:
+	    //  break;
+	    //}
 	  } else {
 		  // running on a solid target --> double-sided strip detector
 	    // "ring" number = strips parallel to beam direction
@@ -328,10 +333,13 @@ TVector3 HitSim::SecondPosition(bool smear) {
 	}
 
 	// strip 0 closest to target
+    // current design we set both strips to kForward
 	if(fSecondDirection == kForward) {//std::cout<<" \n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 2. layer strips/rings quadr forward: "<< quadr << std::endl;
-		z = fTRexSett->GetLayerPositionVector()[1][quadr].z() - fTRexSett->GetLayerDimensionVector()[1][0].z()/2. + strip*fSett->GetTISTARStripWidthZ(1);
+		z = -fTRexSett->GetLayerPositionVector()[1][quadr].z() + fTRexSett->GetLayerDimensionVector()[1][quadr].z()/2. - strip*fSett->GetTISTARStripWidthZ(1);
 		//change ring # so that the range isn't 0 - (n-1), but -n/2 - n/2
-		ring -= fTRexSett->GetLayerDimensionVector()[1][0].y()/fSett->GetTISTARStripWidthY(1)/2.;
+		//ring -= fTRexSett->GetLayerDimensionVector()[1][quadr].y()/fSett->GetTISTARStripWidthY(1)/2.;
+        y = +fTRexSett->GetLayerPositionVector()[1][quadr].y() -fTRexSett->GetLayerDimensionVector()[1][quadr].y()/2. +ring*fSett->GetTISTARStripWidthY(1);
+        x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
 
 		//quadr   0 top   1 lef   2 bot   3 rig
 		//x       +pos    +dtb    -pos    -dtb
@@ -339,9 +347,9 @@ TVector3 HitSim::SecondPosition(bool smear) {
 		
 		 // exchange case1 and case 2 because it is not any more box shape, just top (0) and bottom (0) Leila
 
-	    x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
-	    y = ring*fSett->GetTISTARStripWidthY(1); // why negative????
-        z = -z;
+	    //x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
+	    //y = ring*fSett->GetTISTARStripWidthY(1); // why negative????
+        //z = -z;
 		//switch(quadr) {
 		//	case 0:
 		//		x = -ring*fSett->GetTISTARStripWidthZ(1); // why negative????
@@ -379,37 +387,37 @@ TVector3 HitSim::SecondPosition(bool smear) {
 		ring -= fTRexSett->GetLayerDimensionVector()[1][0].y()/fSett->GetTISTARStripWidthY(1)/2.;
 
 
-	    x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
-	    y = ring*fSett->GetTISTARStripWidthY(1); // why negative????
-        z = -z;
-		//switch(quadr) {
-		//	case 0:
-		//		x = -ring*fSett->GetTISTARStripWidthZ(1);
-		//		y = fTRexSett->GetLayerPositionVector()[1][quadr].x();
-		//		break;
-		//		
-		//	case 1:
-		//		/*x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
-		//		y = ring*fTRexSett->GetSecondBBarrelDeltaESingleStripWidth(); original */
-		//		
-		//		x = ring*fSett->GetTISTARStripWidthZ(1);
-		//		y = -fTRexSett->GetLayerPositionVector()[1][quadr].x(); // changed by Leila
-		//		break;
-		//	case 2:
-		//		/*x = ring*fTRexSett->GetSecondBBarrelDeltaESingleStripWidth();
-		//		y = -fTRexSett->GetLayerPositionVector()[1][quadr].x(); original */ 
-		//		
-		//		x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
-		//		y = ring*fSett->GetTISTARStripWidthZ(1); // changed by Leila
-		//		break;
-		//		
-		//	case 3:
-		//		x = -fTRexSett->GetLayerPositionVector()[1][quadr].x();
-		//		y = -ring*fSett->GetTISTARStripWidthZ(1);
-		//		break;
-		//	default:
-		//		break;
-		//}
+	    //x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
+	    //y = ring*fSett->GetTISTARStripWidthY(1); // why negative????
+        //z = -z;
+		switch(quadr) {
+			case 0:
+				x = -ring*fSett->GetTISTARStripWidthZ(1);
+				y = fTRexSett->GetLayerPositionVector()[1][quadr].x();
+				break;
+				
+			case 1:
+				/*x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
+				y = ring*fTRexSett->GetSecondBBarrelDeltaESingleStripWidth(); original */
+				
+				x = ring*fSett->GetTISTARStripWidthZ(1);
+				y = -fTRexSett->GetLayerPositionVector()[1][quadr].x(); // changed by Leila
+				break;
+			case 2:
+				/*x = ring*fTRexSett->GetSecondBBarrelDeltaESingleStripWidth();
+				y = -fTRexSett->GetLayerPositionVector()[1][quadr].x(); original */ 
+				
+				x = fTRexSett->GetLayerPositionVector()[1][quadr].x();
+				y = ring*fSett->GetTISTARStripWidthZ(1); // changed by Leila
+				break;
+				
+			case 3:
+				x = -fTRexSett->GetLayerPositionVector()[1][quadr].x();
+				y = -ring*fSett->GetTISTARStripWidthZ(1);
+				break;
+			default:
+				break;
+		}
 	}
 
 	// final position in lab frame
