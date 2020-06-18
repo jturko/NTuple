@@ -808,7 +808,6 @@ bool Converter::Run() {
     //Compound* chamberGasMat = new Compound(sett->GetVacuumChamberGas().c_str());
     if(fSettings->VerbosityLevel()) std::cout<<"creating compound \""<<"helium"<<"\""<<std::endl;
     Compound* chamberGasMat = new Compound("helium");
-    std::cout<<"Vaccum Chamber Gas Pressure : "<<sett->GetVacuumChamberGasPressure()<<std::endl;
     chamberGasMat->SetDensity(chamberGasMat->GetDensity()*sett->GetVacuumChamberGasPressure()/6.24151e+08); // internal geant4 units are such that 1 bar = 6.24151e+08 whatevers *** changed by Leila
     std::cout<<"chamberGasMat density: "<<chamberGasMat->GetDensity()<<std::endl;
     Compound* layerMat = new Compound("silicon");
@@ -1856,8 +1855,8 @@ bool Converter::Run() {
                     vertex.SetXYZ(0., 0., (targetForwardZ + targetBackwardZ)/2.); // middle of target
                 }
                 // forcing x/y of vertex to be zero
-                vertex.SetX(0.);
-                vertex.SetY(0.);
+                //vertex.SetX(0.);
+                //vertex.SetY(0.);
                 
                 if(fSettings->VerbosityLevel() > 1) {
                     std::cout<<"Calculated Vertex:\t"<<vertex.X()<<"\t"<<vertex.Y()<<"\t"<<vertex.Z()<<std::endl;
@@ -2055,6 +2054,134 @@ bool Converter::Run() {
 
 
                 } // end gas target
+                if(fSettings->VerbosityLevel()>1) {
+                    std::cout<<"\n theta "<<recoilThetaRec<<", phi "<<recoilPhiRec<<" (sinTheta "<<sinTheta<<", tmpPhi "<<tmpPhi<<", cosPhi "<<cosPhi<<"): "
+                             <<foilThicknessMgCm2/(sinTheta)<<" mg/cm^2, "<<recoilEnergyRec<<" => "<<recoilEnergyRecEloss<<", diff "<<recoilEnergyRecEloss-recoilEnergyRec<<std::endl;
+                }
+
+                // position has already been set above
+                part.SetRecEnergy(recoilEnergyRec);
+                part.SetType(2); //proton; this is for one-neutron transfer, only; this sets the mass of the particle
+                part.SetReconstructed(); // set TLorentzVector using mass, rec. energy, and position 
+
+                //////////////////////////
+                // Q-value reconstruction
+                //////////////////////////
+
+                transferP->SetEBeam(beamEnergyRec);
+                transferP->Final(recoilThetaRec/180.*TMath::Pi(), 2, true);
+                transferP->SetAngles(recoilThetaRec/180.*TMath::Pi(), 2, true);
+                double excEnergy = transferP->GetExcEnergy(part.GetReconstructed(), fSettings->VerbosityLevel()-1);
+
+                double recoilThetaCmRec = transferP->GetThetacm(3)/TMath::Pi()*180.;
+                if(fSettings->VerbosityLevel()>1) {
+                    std::cout<<"\n beamEnergyRec "<<beamEnergyRec<<" => eex = "<<excEnergy<<" (middle spline at "<<recoilThetaRec<<" = "<<middle->Eval(recoilThetaRec)<<", recoilEnergyRec = "<<recoilEnergyRec<<")"<<std::endl;
+                    std::cout<<"recoilThetaCmRec = "<<recoilThetaCmRec<<", "<<transferP->GetThetacm(3)<<", "<<transferP->GetThetacm(2)<<", "<<transferP->GetThetacm(1)<<", "<<transferP->GetThetacm(0)<<std::endl;
+
+                    if(excEnergy>5000) std::cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1********************************1 excEnergy: "<<excEnergy<<" 1. layer E "<< hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" 2. layer E "<< hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()>1)<<" Epad: "<<recoilEnergyRecErest<<" Epad from hit: "<<hit->GetPadEnergy()<<std::endl;
+                }
+
+                ///////////////////////
+                // Fill some histograms
+                ///////////////////////
+
+                Get1DHistogram("reaction","TistarAnalysis")->Fill(fTISTARGenReaction);
+                Get2DHistogram("hitpattern","TistarAnalysis")->Fill(index_first, index_second);
+                Get2DHistogram("originXY","TistarAnalysis")->Fill(vertex.X(), vertex.Y());
+                Get2DHistogram("originXYErr","TistarAnalysis")->Fill(vertex.X() - fTISTARGenReactionX, vertex.Y() - fTISTARGenReactionY);
+                Get2DHistogram("errorOrigin","TistarAnalysis")->Fill(vertex.Z(),  vertex.Z() - fTISTARGenReactionZ );
+                Get2DHistogram("errorThetaPhi","TistarAnalysis")->Fill(recoilThetaRec - recoilThetaSim, recoilPhiRec - recoilPhiSim);
+                Get2DHistogram("dE12VsPad","TistarAnalysis")->Fill(recoilEnergyRecErest, recoilEnergyRecdE );
+                Get2DHistogram("dE12VsE","TistarAnalysis")->Fill(recoilEnergyRec, recoilEnergyRecdE );
+                Get2DHistogram("dE1VsE","TistarAnalysis")->Fill(recoilEnergyRec, hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()-1));//(firstDeltaE[index_first]->at(0)).GetRear() );
+                Get2DHistogram("dE2VsE","TistarAnalysis")->Fill(recoilEnergyRec, hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()-1));//(secondDeltaE[index_second]->at(0)).GetRear() );
+                Get2DHistogram("dE1VsdE2","TistarAnalysis")->Fill(hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()-1), hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()-1));//(firstDeltaE[index_first]->at(0)).GetRear() );
+                Get2DHistogram("eVsTheta","TistarAnalysis")->Fill(recoilThetaRec, recoilEnergyRec);
+                Get2DHistogram("eVsZ","TistarAnalysis")->Fill(vertex.Z(), recoilEnergyRec);
+
+                Get2DHistogram("eRecErrVsESim","TistarAnalysis")->Fill(fTISTARGenRecoilEnergy, recoilEnergyRec - fTISTARGenRecoilEnergy);
+                Get2DHistogram("thetaErrorVsZ","TistarAnalysis")->Fill(vertex.Z(), recoilThetaRec - recoilThetaSim);
+                //if(hit->GetPadEnergy()>1.00) thetaErrorVsTheta->Fill(recoilThetaSim , recoilThetaRec - recoilThetaSim);
+                Get2DHistogram("thetaErrorVsTheta","TistarAnalysis")->Fill(recoilThetaSim , recoilThetaRec - recoilThetaSim); // why twice?
+                Get2DHistogram("thetaErrorVsTheta","TistarAnalysis")->Fill(recoilThetaSim , recoilThetaRec - recoilThetaSim);
+                if(recoilEnergyRecErest > 0.)  Get2DHistogram("thetaErrorVsThetaEpadCut","TistarAnalysis")->Fill(recoilThetaSim , recoilThetaRec - recoilThetaSim);
+                if(fTISTARGenReactionBeamEnergyCM > 0.0) Get2DHistogram("zReactionEnergy","TistarAnalysis")->Fill(vertex.Z(), beamEnergyRec);
+                //if(reactionEnergyBeamCM == -1.0) std::cout<<"leila!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! "<<reactionEnergyBeamCM<<std::endl;
+                Get1DHistogram("excEnProton","TistarAnalysis")->Fill(excEnergy);
+                //if(recoilEnergyRecErest>1.00) excEnProtonVsTheta->Fill(recoilThetaRec, excEnergy); ???????????????????????????
+                Get2DHistogram("excEnProtonVsTheta","TistarAnalysis")->Fill(recoilThetaRec, excEnergy);
+                Get2DHistogram("excEnProtonVsPhi","TistarAnalysis")->Fill(recoilPhiRec, excEnergy);
+                Get2DHistogram("excEnProtonVsThetaCm","TistarAnalysis")->Fill(recoilThetaCmRec, excEnergy);
+                Get2DHistogram("excEnProtonVsZ","TistarAnalysis")->Fill(vertex.Z(), excEnergy);
+                if(fTISTARGenReaction == 0) {
+                    Get2DHistogram("excEnProtonVsThetaGS","TistarAnalysis")->Fill(recoilThetaRec, excEnergy);
+                    Get2DHistogram("excEnProtonVsZGS","TistarAnalysis")->Fill(vertex.Z(), excEnergy);
+                }
+                Get2DHistogram("thetaVsZ","TistarAnalysis")->Fill(vertex.Z(), recoilThetaRec);
+                if(index_first == index_second) {
+                    Get2DHistogram("eVsZSame","TistarAnalysis")->Fill(vertex.Z(), recoilEnergyRec);
+                    Get2DHistogram("thetaVsZSame","TistarAnalysis")->Fill(vertex.Z(), recoilThetaRec);
+                } else {
+                    Get2DHistogram("eVsZCross","TistarAnalysis")->Fill(vertex.Z(), recoilEnergyRec);
+                    Get2DHistogram("thetaVsZCross","TistarAnalysis")->Fill(vertex.Z(), recoilThetaRec);
+                }
+                Get2DHistogram("phiVsZ","TistarAnalysis")->Fill(vertex.Z(), recoilPhiRec);
+                Get2DHistogram("phiErrorVsPhi","TistarAnalysis")->Fill(recoilPhiRec, recoilPhiRec - recoilPhiSim);
+                if(fTISTARFirstDeltaE[index_first]->at(0).GetID() == 0) {
+
+                }
+                Get2DHistogram("betaCmVsZ","TistarAnalysis")->Fill(vertex.Z(), transferP->GetBetacm());
+                Get2DHistogram("eCmVsZ","TistarAnalysis")->Fill(vertex.Z(), transferP->GetCmEnergy()/1000.);
+                if(silicon_mult_second == 1) Get2DHistogram("stripPattern","TistarAnalysis")->Fill(index_second*fSettings->GetTISTARnStripsY(0) + fTISTARSecondDeltaE[index_second]->at(0).GetStripNr()[0], fTISTARSecondDeltaE[index_second]->at(0).GetID()*fSettings->GetTISTARnStripsZ(0) + fTISTARSecondDeltaE[index_second]->at(0).GetRingNr()[0]);
+                Get2DHistogram("recBeamEnergyErrVsZ","TistarAnalysis")->Fill(vertex.Z(), beamEnergyRec - fTISTARGenReactionBeamEnergy);
+                Get2DHistogram("thetaCmVsThetaLab","TistarAnalysis")->Fill(recoilThetaRec, recoilThetaCmRec);
+                Get2DHistogram("zErrorVsthetaError","TistarAnalysis")->Fill(recoilThetaRec - recoilThetaSim, vertex.Z() - fTISTARGenReactionZ);
+                Get2DHistogram("elossVsTheta","TistarAnalysis")->Fill(recoilThetaRec, recoilEnergyRecEloss - recoilEnergyRec);
+                Get2DHistogram("elossVsPhi","TistarAnalysis")->Fill(recoilPhiRec, recoilEnergyRecEloss - recoilEnergyRec);
+
+                Get2DHistogram("dE2VsdE2Pad","TistarAnalysis")->Fill(hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel())+hit->GetPadEnergy(),hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()));
+                Get2DHistogram("EPadVsThetaLab","TistarAnalysis")->Fill(recoilThetaRec,hit->GetPadEnergy());
+                Get2DHistogram("EPadVsZ","TistarAnalysis")->Fill(vertex.Z(),hit->GetPadEnergy());
+                if(recoilEnergyRecErest == 0.) {Get2DHistogram("dE2VsThetaLabEpadCut","TistarAnalysis")->Fill(recoilThetaRec,hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()-1));}
+                if(recoilThetaRec>0.0 && recoilThetaRec<180.0) {Get2DHistogram("dE2VsEPadThetaCut","TistarAnalysis")->Fill(hit->GetPadEnergy(),hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()-1));}
+                Get2DHistogram("dE1VsThetaLab","TistarAnalysis")->Fill(recoilThetaRec,hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()-1));
+                Get2DHistogram("dE2VsThetaLab","TistarAnalysis")->Fill(recoilThetaRec,hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()-1));
+                Get2DHistogram("dE12VsThetaLab","TistarAnalysis")->Fill(recoilThetaRec,hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()-1)+hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()-1));
+                Get2DHistogram("dE1EpadVsThetaLab","TistarAnalysis")->Fill(recoilThetaRec,hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()-1)+hit->GetPadEnergy());
+                Get2DHistogram("dE2EpadVsThetaLab","TistarAnalysis")->Fill(recoilThetaRec,hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()-1)+hit->GetPadEnergy());
+
+                // ************************* Q-value using the reconstructed energy loss **************************8
+
+                // now we reconstruct the q-value using the reconstructed energy loss
+                // position has already been set above
+                part.SetRecEnergy(recoilEnergyRecEloss);
+                part.SetType(2); //proton; this is for one-neutron transfer, only; this sets the mass of the particle
+                part.SetReconstructed(); // set TLorentzVector using mass, rec. energy, and position 
+                transferP->Final(recoilThetaRec/180.*TMath::Pi(), 2, true);
+                transferP->SetAngles(recoilThetaRec/180.*TMath::Pi(), 2, true);
+                excEnergy = transferP->GetExcEnergy(part.GetReconstructed(), fSettings->VerbosityLevel()-1);
+
+                recoilThetaCmRec = transferP->GetThetacm(3)/TMath::Pi()*180.;
+
+
+        
+                Get2DHistogram("hEbeamRecVsSim","TistarAnalysis")->Fill(beamEnergyRec,beamEnergy);
+
+                Get2DHistogram("excEnElossVsTheta","TistarAnalysis")->Fill(recoilThetaRec, excEnergy);
+                if(recoilEnergyRecErest > 0. ) {Get2DHistogram("excEnElossVsThetaEpadCut","TistarAnalysis")->Fill(recoilThetaRec, excEnergy);}
+                Get1DHistogram("excEnProtonCorr","TistarAnalysis")->Fill(excEnergy);
+                if(recoilEnergyRecErest > 0. ) {Get1DHistogram("excEnProtonCorrEpadCut","TistarAnalysis")->Fill(excEnergy);}
+                Get2DHistogram("excEnProtonCorrVsX","TistarAnalysis")->Fill(vertex.X(),excEnergy);
+                Get2DHistogram("excEnProtonCorrVsY","TistarAnalysis")->Fill(vertex.Y(),excEnergy);
+                Get2DHistogram("excEnProtonCorrVsZ","TistarAnalysis")->Fill(vertex.Z(),excEnergy);
+                Get2DHistogram("excEnProtonCorrVsT","TistarAnalysis")->Fill(sqrt(vertex.X()*vertex.X()+vertex.Y()*vertex.Y()),excEnergy);
+                Get2DHistogram("excEnProtonCorrVsR","TistarAnalysis")->Fill(sqrt(vertex.X()*vertex.X()+vertex.Y()*vertex.Y()+vertex.Z()*vertex.Z()),excEnergy);
+                if(dE1MeasMinRec<20.0 && dE2MeasMinRec<40.0) Get1DHistogram("excEnProtonCorrdE1Sigma1","TistarAnalysis")->Fill(excEnergy);
+                if(dE1MeasMinRec<40.0 && dE2MeasMinRec<80.0) Get1DHistogram("excEnProtonCorrdE1Sigma2","TistarAnalysis")->Fill(excEnergy);
+
+                //if(0 <= fTISTARGenReaction && fTISTARGenReaction < nofLevels) Get2DHistogram(Form("excEnElossVsThetaLevel_%d",fTISTARGenReaction),"TistarAnalysis")->Fill(recoilThetaRec, excEnergy);
+                //if(0 <= reactionSim && reactionSim < nofLevels-1) excEnProtonVsTheta->Fill(recoilThetaRec, excEnergy);//leila 
+
 
             } // end mult = 1 events
 
@@ -2089,6 +2216,7 @@ bool Converter::Run() {
 
         // adding up ti-star hits (checking to see if we have more than 1 in a given strip/ring)
         if(fSystemID == 9500) {
+            if(fDepEnergy < 10.) continue; // try putting a low energy cut on which registers as a hit
             TVector3 particlePos = TVector3(fPosx, fPosy, fPosz);
             TVector3 stripPos = TVector3(fSettings->GetTistarSettings()->GetLayerPositionVector()[fDetNumber][fCryNumber]);
             TVector3 stripDim = TVector3(fSettings->GetTistarSettings()->GetLayerDimensionVector()[fDetNumber][fCryNumber]);
