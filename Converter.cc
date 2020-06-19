@@ -1646,74 +1646,12 @@ bool Converter::Run() {
                            fTISTARGenChain.GetFile()->GetName()<<" doesn't exist"<<std::endl;
                 return false;
             }
-            // loop over all first-layer panels
-            for(int panelNb = 0; panelNb < 4; panelNb++) {
-                ParticleMC part;
-                int nStripsAndRings = 0;
-                // loop over all strips that have been hit
-                for(size_t i = 0; i < fTISTARFirstLayerStripNb[panelNb].size(); i++) {
-                    part.AddStrip(fTISTARFirstLayerStripNb[panelNb][i],         // strip number
-                                  fTISTARFirstLayerStripEnergy[panelNb][i],     // energy
-                                  fTISTARFirstLayerStripA[panelNb][i],          // particle A
-                                  fTISTARFirstLayerStripZ[panelNb][i],          // particle Z
-                                  fTISTARFirstLayerStripTrackID[panelNb][i],    // trackID
-                                  fTISTARFirstLayerStripTime[panelNb][i],       // time
-                                  fTISTARFirstLayerStripPos[panelNb][i].x(),    // x position
-                                  fTISTARFirstLayerStripPos[panelNb][i].y(),    // y position
-                                  fTISTARFirstLayerStripPos[panelNb][i].z(),    // z position
-                                  fTISTARFirstLayerStripStopped[panelNb][i]);    // is stopped?
-                    nStripsAndRings++;
-                }
-                // loop over all rings that have been hit
-                for(size_t i = 0; i < fTISTARFirstLayerRingNb[panelNb].size(); i++) {
-                    part.AddRing(fTISTARFirstLayerRingNb[panelNb][i],           // ring number
-                                  fTISTARFirstLayerRingEnergy[panelNb][i],      // energy
-                                  fTISTARFirstLayerRingA[panelNb][i],           // particle A
-                                  fTISTARFirstLayerRingZ[panelNb][i],           // particle Z
-                                  fTISTARFirstLayerRingTrackID[panelNb][i],     // trackID
-                                  fTISTARFirstLayerRingTime[panelNb][i],        // time
-                                  fTISTARFirstLayerRingStopped[panelNb][i]);    // is stopped?
-                    nStripsAndRings++;
-                }
-                // only fill if we have at least one strip/ring activated
-                if(nStripsAndRings > 0) {
-                    fTISTARFirstDeltaE[panelNb]->push_back(part);
-                }
-            }
-            // loop over all second-layer panels
-            for(int panelNb = 0; panelNb < 2; panelNb++) {
-                ParticleMC part;
-                int nStripsAndRings = 0;
-                // loop over all strips that have been hit
-                for(size_t i = 0; i < fTISTARSecondLayerStripNb[panelNb].size(); i++) {
-                    part.AddStrip(fTISTARSecondLayerStripNb[panelNb][i],         // strip number
-                                  fTISTARSecondLayerStripEnergy[panelNb][i],     // energy
-                                  fTISTARSecondLayerStripA[panelNb][i],          // particle A
-                                  fTISTARSecondLayerStripZ[panelNb][i],          // particle Z
-                                  fTISTARSecondLayerStripTrackID[panelNb][i],    // trackID
-                                  fTISTARSecondLayerStripTime[panelNb][i],       // time
-                                  fTISTARSecondLayerStripPos[panelNb][i].x(),    // x position
-                                  fTISTARSecondLayerStripPos[panelNb][i].y(),    // y position
-                                  fTISTARSecondLayerStripPos[panelNb][i].z(),    // z position
-                                  fTISTARSecondLayerStripStopped[panelNb][i]);    // is stopped?
-                    nStripsAndRings++;
-                }
-                // loop over all rings that have been hit
-                for(size_t i = 0; i < fTISTARSecondLayerRingNb[panelNb].size(); i++) {
-                    part.AddRing(fTISTARSecondLayerRingNb[panelNb][i],           // ring number
-                                  fTISTARSecondLayerRingEnergy[panelNb][i],      // energy
-                                  fTISTARSecondLayerRingA[panelNb][i],           // particle A
-                                  fTISTARSecondLayerRingZ[panelNb][i],           // particle Z
-                                  fTISTARSecondLayerRingTrackID[panelNb][i],     // trackID
-                                  fTISTARSecondLayerRingTime[panelNb][i],        // time
-                                  fTISTARSecondLayerRingStopped[panelNb][i]);    // is stopped?
-                    nStripsAndRings++;
-                }
-                if(nStripsAndRings > 0) {
-                    fTISTARSecondDeltaE[panelNb]->push_back(part);
-                }
-            }
         
+            // push the data collected in the tistar vectors that we fill from looping over the normal "hits" saved 
+            // in the ntuple (see FillTistarVectors method) into the ParticleMC vectors we use for the analysis
+            FillTistarParticleMCs();
+
+            // fill strip/ring number histograms
             for(int panel=0; panel<4; panel++) {
                 for(int hit=0; hit<fTISTARFirstDeltaE[panel]->size(); hit++) {
                     hist1D = Get1DHistogram(Form("Layer1Panel%i_nStripZ",panel+1),"TISTAR1D");        
@@ -2186,7 +2124,7 @@ bool Converter::Run() {
             } // end mult = 1 events
 
             ClearTistarVectors();
-            ClearParticleMC();
+            ClearTistarParticleMCs();
             
             // re-set this at the end, as we need the previous hit event number to get
             // the correct entry in the generator tree
@@ -2215,103 +2153,7 @@ bool Converter::Run() {
         }
 
         // adding up ti-star hits (checking to see if we have more than 1 in a given strip/ring)
-        if(fSystemID == 9500) {
-            if(fDepEnergy < 10.) continue; // try putting a low energy cut on which registers as a hit
-            TVector3 particlePos = TVector3(fPosx, fPosy, fPosz);
-            TVector3 stripPos = TVector3(fSettings->GetTistarSettings()->GetLayerPositionVector()[fDetNumber][fCryNumber]);
-            TVector3 stripDim = TVector3(fSettings->GetTistarSettings()->GetLayerDimensionVector()[fDetNumber][fCryNumber]);
-            ParticleMC part;
-            int stripNumber, ringNumber;
-            switch(fDetNumber) {
-                size_t j;
-                case 0: // first layer - pixelated w/ 4 panels
-                    // strip calculations
-                    stripNumber = CalculateStripNumber(fDetNumber, particlePos, stripPos, stripDim);
-                    for(j = 0; j < fTISTARFirstLayerStripNb[fCryNumber].size(); j++) { // checking to see if this strip is already activated
-                        if(stripNumber == fTISTARFirstLayerStripNb[fCryNumber][j]) { // we found a strip that was already activated!
-                            fTISTARFirstLayerStripEnergy[fCryNumber][j] += fDepEnergy; 
-                            break;
-                        }
-                    }
-                    if(j == fTISTARFirstLayerStripNb[fCryNumber].size()) { // we didn't find an activated strip, so we add one
-                        fTISTARFirstLayerStripNb[fCryNumber].push_back(stripNumber);
-                        fTISTARFirstLayerStripEnergy[fCryNumber].push_back(fDepEnergy);
-                        fTISTARFirstLayerStripA[fCryNumber].push_back(fTargetA);
-                        fTISTARFirstLayerStripZ[fCryNumber].push_back(fTargetZ);
-                        fTISTARFirstLayerStripTrackID[fCryNumber].push_back(fTrackID);
-                        fTISTARFirstLayerStripTime[fCryNumber].push_back(fTime);
-                        fTISTARFirstLayerStripStopped[fCryNumber].push_back(-1); // might need to actually calculate this using the IsStopped method from TRexBarrelDeltaESingleSensitiveDetector
-                        fTISTARFirstLayerStripPos[fCryNumber].push_back(particlePos);
-                    }
-                    // ring calculations
-                    ringNumber = CalculateRingNumber(fDetNumber, particlePos, stripPos, stripDim);
-                    for(j = 0; j < fTISTARFirstLayerRingNb[fCryNumber].size(); j++) { // checking to see if this Ring is already activated
-                        if(ringNumber == fTISTARFirstLayerRingNb[fCryNumber][j]) { // we found a Ring that was already activated!
-                            fTISTARFirstLayerRingEnergy[fCryNumber][j] += fDepEnergy; 
-                            break;
-                        }
-                    }
-                    if(j == fTISTARFirstLayerRingNb[fCryNumber].size()) { // we didn't find an activated Ring, so we add one
-                        fTISTARFirstLayerRingNb[fCryNumber].push_back(ringNumber);
-                        fTISTARFirstLayerRingEnergy[fCryNumber].push_back(fDepEnergy);
-                        fTISTARFirstLayerRingA[fCryNumber].push_back(fTargetA);
-                        fTISTARFirstLayerRingZ[fCryNumber].push_back(fTargetZ);
-                        fTISTARFirstLayerRingTrackID[fCryNumber].push_back(fTrackID);
-                        fTISTARFirstLayerRingTime[fCryNumber].push_back(fTime);
-                        fTISTARFirstLayerRingStopped[fCryNumber].push_back(-1); // might need to actually calculate this using the IsStopped method from TRexBarrelDeltaESingleSensitiveDetector
-                    }
-                    break;
-    
-                case 1: // second layer - pixelated w/ 2 panels
-                    // strip calculations
-                    stripNumber = CalculateStripNumber(fDetNumber, particlePos, stripPos, stripDim);
-                    for(j = 0; j < fTISTARSecondLayerStripNb[fCryNumber].size(); j++) { // checking to see if this strip is already activated
-                        if(stripNumber == fTISTARSecondLayerStripNb[fCryNumber][j]) { // we found a strip that was already activated!
-                            fTISTARSecondLayerStripEnergy[fCryNumber][j] += fDepEnergy; 
-                            break;
-                        }
-                    }
-                    if(j == fTISTARSecondLayerStripNb[fCryNumber].size()) { // we didn't find an activated strip, so we add one
-                        fTISTARSecondLayerStripNb[fCryNumber].push_back(stripNumber);
-                        fTISTARSecondLayerStripEnergy[fCryNumber].push_back(fDepEnergy);
-                        fTISTARSecondLayerStripA[fCryNumber].push_back(fTargetA);
-                        fTISTARSecondLayerStripZ[fCryNumber].push_back(fTargetZ);
-                        fTISTARSecondLayerStripTrackID[fCryNumber].push_back(fTrackID);
-                        fTISTARSecondLayerStripTime[fCryNumber].push_back(fTime);
-                        fTISTARSecondLayerStripStopped[fCryNumber].push_back(-1); // might need to actually calculate this using the IsStopped method from TRexBarrelDeltaESingleSensitiveDetector
-                        fTISTARSecondLayerStripPos[fCryNumber].push_back(particlePos);
-                    }
-                    // ring calculations
-                    ringNumber = CalculateRingNumber(fDetNumber, particlePos, stripPos, stripDim);
-                    for(j = 0; j < fTISTARSecondLayerRingNb[fCryNumber].size(); j++) { // checking to see if this Ring is already activated
-                        if(ringNumber == fTISTARSecondLayerRingNb[fCryNumber][j]) { // we found a Ring that was already activated!
-                            fTISTARSecondLayerRingEnergy[fCryNumber][j] += fDepEnergy; 
-                            break;
-                        }
-                    }
-                    if(j == fTISTARSecondLayerRingNb[fCryNumber].size()) { // we didn't find an activated Ring, so we add one
-                        fTISTARSecondLayerRingNb[fCryNumber].push_back(ringNumber);
-                        fTISTARSecondLayerRingEnergy[fCryNumber].push_back(fDepEnergy);
-                        fTISTARSecondLayerRingA[fCryNumber].push_back(fTargetA);
-                        fTISTARSecondLayerRingZ[fCryNumber].push_back(fTargetZ);
-                        fTISTARSecondLayerRingTrackID[fCryNumber].push_back(fTrackID);
-                        fTISTARSecondLayerRingTime[fCryNumber].push_back(fTime);
-                        fTISTARSecondLayerRingStopped[fCryNumber].push_back(-1); // might need to actually calculate this using the IsStopped method from TRexBarrelDeltaESingleSensitiveDetector
-                    }
-                    break;
-
-                case 2: // third (pad) layer - not pixelated, 2 panels
-                    // here we can directly create and add the new ParticleMC
-                    ParticleMC part;
-                    part.SetEdet(fDepEnergy);
-                    part.SetTime(fTime);
-                    part.SetA(fTargetA);
-                    part.SetZ(fTargetZ);
-                    part.SetTrackID(fTrackID);
-                    fTISTARPad[fCryNumber]->push_back(part);
-                    break;
-            }    
-        }
+        FillTistarVectors();
 
         //create energy-resolution smeared energy
         smearedEnergy = fRandom.Gaus(fDepEnergy,fSettings->Resolution(fSystemID,fDetNumber,fCryNumber,fDepEnergy));
@@ -3237,7 +3079,9 @@ double Converter::transZ(double x, double y, double z, double theta, double phi)
     return -x*sin(theta)+z*cos(theta);
 }
 
-int Converter::CalculateStripNumber(int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim) {
+// ------------- Tistar methods ------------- //
+
+int Converter::CalculateTistarStripNumber(int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim) {
     int stripNb = -1;
     TVector3 localPos = particlePos - stripPos;
     //double z = localPos.z() + stripDim.z()/2.;
@@ -3274,7 +3118,7 @@ int Converter::CalculateStripNumber(int layerNb, TVector3 particlePos, TVector3 
     return stripNb;
 }
 
-int Converter::CalculateRingNumber(int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim) {
+int Converter::CalculateTistarRingNumber(int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim) {
     int ringNb = -1;
     TVector3 localPos = particlePos - stripPos;
     double y = localPos.y() + stripDim.y()/2.;
@@ -3303,18 +3147,103 @@ int Converter::CalculateRingNumber(int layerNb, TVector3 particlePos, TVector3 s
     return ringNb;
 }
 
-void Converter::ClearParticleMC() {
-    for(int strip=0; strip<4; strip++) { 
-        for(auto particle : *(fTISTARFirstDeltaE[strip])) particle.ClearParticleMC();
-        fTISTARFirstDeltaE[strip]->clear();
-    }
-    for(int strip=0; strip<2; strip++) {
-        for(auto particle : *(fTISTARSecondDeltaE[strip])) particle.ClearParticleMC();
-        fTISTARSecondDeltaE[strip]->clear();
-    }
-    for(int strip=0; strip<2; strip++) {
-        for(auto particle : *(fTISTARPad[strip])) particle.ClearParticleMC();
-        fTISTARPad[strip]->clear();
+void Converter::FillTistarVectors() {
+    if(fSystemID == 9500) {
+        if(fDepEnergy < 10.) return; // try putting a low energy cut on which registers as a hit
+        TVector3 particlePos = TVector3(fPosx, fPosy, fPosz);
+        TVector3 stripPos = TVector3(fSettings->GetTistarSettings()->GetLayerPositionVector()[fDetNumber][fCryNumber]);
+        TVector3 stripDim = TVector3(fSettings->GetTistarSettings()->GetLayerDimensionVector()[fDetNumber][fCryNumber]);
+        ParticleMC part;
+        int stripNumber, ringNumber;
+        switch(fDetNumber) {
+            size_t j;
+            case 0: // first layer - pixelated w/ 4 panels
+                // strip calculations
+                stripNumber = CalculateTistarStripNumber(fDetNumber, particlePos, stripPos, stripDim);
+                for(j = 0; j < fTISTARFirstLayerStripNb[fCryNumber].size(); j++) { // checking to see if this strip is already activated
+                    if(stripNumber == fTISTARFirstLayerStripNb[fCryNumber][j]) { // we found a strip that was already activated!
+                        fTISTARFirstLayerStripEnergy[fCryNumber][j] += fDepEnergy; 
+                        break;
+                    }
+                }
+                if(j == fTISTARFirstLayerStripNb[fCryNumber].size()) { // we didn't find an activated strip, so we add one
+                    fTISTARFirstLayerStripNb[fCryNumber].push_back(stripNumber);
+                    fTISTARFirstLayerStripEnergy[fCryNumber].push_back(fDepEnergy);
+                    fTISTARFirstLayerStripA[fCryNumber].push_back(fTargetA);
+                    fTISTARFirstLayerStripZ[fCryNumber].push_back(fTargetZ);
+                    fTISTARFirstLayerStripTrackID[fCryNumber].push_back(fTrackID);
+                    fTISTARFirstLayerStripTime[fCryNumber].push_back(fTime);
+                    fTISTARFirstLayerStripStopped[fCryNumber].push_back(-1); // might need to actually calculate this using the IsStopped method from TRexBarrelDeltaESingleSensitiveDetector
+                    fTISTARFirstLayerStripPos[fCryNumber].push_back(particlePos);
+                }
+                // ring calculations
+                ringNumber = CalculateTistarRingNumber(fDetNumber, particlePos, stripPos, stripDim);
+                for(j = 0; j < fTISTARFirstLayerRingNb[fCryNumber].size(); j++) { // checking to see if this Ring is already activated
+                    if(ringNumber == fTISTARFirstLayerRingNb[fCryNumber][j]) { // we found a Ring that was already activated!
+                        fTISTARFirstLayerRingEnergy[fCryNumber][j] += fDepEnergy; 
+                        break;
+                    }
+                }
+                if(j == fTISTARFirstLayerRingNb[fCryNumber].size()) { // we didn't find an activated Ring, so we add one
+                    fTISTARFirstLayerRingNb[fCryNumber].push_back(ringNumber);
+                    fTISTARFirstLayerRingEnergy[fCryNumber].push_back(fDepEnergy);
+                    fTISTARFirstLayerRingA[fCryNumber].push_back(fTargetA);
+                    fTISTARFirstLayerRingZ[fCryNumber].push_back(fTargetZ);
+                    fTISTARFirstLayerRingTrackID[fCryNumber].push_back(fTrackID);
+                    fTISTARFirstLayerRingTime[fCryNumber].push_back(fTime);
+                    fTISTARFirstLayerRingStopped[fCryNumber].push_back(-1); // might need to actually calculate this using the IsStopped method from TRexBarrelDeltaESingleSensitiveDetector
+                }
+                break;
+    
+            case 1: // second layer - pixelated w/ 2 panels
+                // strip calculations
+                stripNumber = CalculateTistarStripNumber(fDetNumber, particlePos, stripPos, stripDim);
+                for(j = 0; j < fTISTARSecondLayerStripNb[fCryNumber].size(); j++) { // checking to see if this strip is already activated
+                    if(stripNumber == fTISTARSecondLayerStripNb[fCryNumber][j]) { // we found a strip that was already activated!
+                        fTISTARSecondLayerStripEnergy[fCryNumber][j] += fDepEnergy; 
+                        break;
+                    }
+                }
+                if(j == fTISTARSecondLayerStripNb[fCryNumber].size()) { // we didn't find an activated strip, so we add one
+                    fTISTARSecondLayerStripNb[fCryNumber].push_back(stripNumber);
+                    fTISTARSecondLayerStripEnergy[fCryNumber].push_back(fDepEnergy);
+                    fTISTARSecondLayerStripA[fCryNumber].push_back(fTargetA);
+                    fTISTARSecondLayerStripZ[fCryNumber].push_back(fTargetZ);
+                    fTISTARSecondLayerStripTrackID[fCryNumber].push_back(fTrackID);
+                    fTISTARSecondLayerStripTime[fCryNumber].push_back(fTime);
+                    fTISTARSecondLayerStripStopped[fCryNumber].push_back(-1); // might need to actually calculate this using the IsStopped method from TRexBarrelDeltaESingleSensitiveDetector
+                    fTISTARSecondLayerStripPos[fCryNumber].push_back(particlePos);
+                }
+                // ring calculations
+                ringNumber = CalculateTistarRingNumber(fDetNumber, particlePos, stripPos, stripDim);
+                for(j = 0; j < fTISTARSecondLayerRingNb[fCryNumber].size(); j++) { // checking to see if this Ring is already activated
+                    if(ringNumber == fTISTARSecondLayerRingNb[fCryNumber][j]) { // we found a Ring that was already activated!
+                        fTISTARSecondLayerRingEnergy[fCryNumber][j] += fDepEnergy; 
+                        break;
+                    }
+                }
+                if(j == fTISTARSecondLayerRingNb[fCryNumber].size()) { // we didn't find an activated Ring, so we add one
+                    fTISTARSecondLayerRingNb[fCryNumber].push_back(ringNumber);
+                    fTISTARSecondLayerRingEnergy[fCryNumber].push_back(fDepEnergy);
+                    fTISTARSecondLayerRingA[fCryNumber].push_back(fTargetA);
+                    fTISTARSecondLayerRingZ[fCryNumber].push_back(fTargetZ);
+                    fTISTARSecondLayerRingTrackID[fCryNumber].push_back(fTrackID);
+                    fTISTARSecondLayerRingTime[fCryNumber].push_back(fTime);
+                    fTISTARSecondLayerRingStopped[fCryNumber].push_back(-1); // might need to actually calculate this using the IsStopped method from TRexBarrelDeltaESingleSensitiveDetector
+                }
+                break;
+
+            case 2: // third (pad) layer - not pixelated, 2 panels
+                // here we can directly create and add the new ParticleMC
+                ParticleMC part;
+                part.SetEdet(fDepEnergy);
+                part.SetTime(fTime);
+                part.SetA(fTargetA);
+                part.SetZ(fTargetZ);
+                part.SetTrackID(fTrackID);
+                fTISTARPad[fCryNumber]->push_back(part);
+                break;
+        }    
     }
 }
 
@@ -3355,29 +3284,89 @@ void Converter::ClearTistarVectors() {
     }
 }
 
-void Converter::PrintTistarVectors() {
-        for(int panel = 0; panel < 4; panel++) {
-            std::cout<<"layer: 0, panel: "<<panel<<std::endl;
-            std::cout<<" -> strip nHits: "<<int(fTISTARFirstLayerStripNb[panel].size())<<std::endl;
-            for(size_t i = 0; i < fTISTARFirstLayerStripNb[panel].size(); i++) {
-                std::cout<<" ---> hit: "<<i<<", edep: "<<fTISTARFirstLayerStripEnergy[panel][i]<<", strip: "<<fTISTARFirstLayerStripNb[panel][i]<<std::endl;
-            }
-            std::cout<<" -> ring nHits: "<<int(fTISTARFirstLayerRingNb[panel].size())<<std::endl;
-            for(size_t i = 0; i < fTISTARFirstLayerRingNb[panel].size(); i++) {
-                std::cout<<" ---> hit: "<<i<<", edep: "<<fTISTARFirstLayerRingEnergy[panel][i]<<", ring: "<<fTISTARFirstLayerRingNb[panel][i]<<std::endl;
-            }
+void Converter::FillTistarParticleMCs() {
+    // loop over all first-layer panels
+    for(int panelNb = 0; panelNb < 4; panelNb++) {
+        ParticleMC part;
+        int nStripsAndRings = 0;
+        // loop over all strips that have been hit
+        for(size_t i = 0; i < fTISTARFirstLayerStripNb[panelNb].size(); i++) {
+            part.AddStrip(fTISTARFirstLayerStripNb[panelNb][i],         // strip number
+                          fTISTARFirstLayerStripEnergy[panelNb][i],     // energy
+                          fTISTARFirstLayerStripA[panelNb][i],          // particle A
+                          fTISTARFirstLayerStripZ[panelNb][i],          // particle Z
+                          fTISTARFirstLayerStripTrackID[panelNb][i],    // trackID
+                          fTISTARFirstLayerStripTime[panelNb][i],       // time
+                          fTISTARFirstLayerStripPos[panelNb][i].x(),    // x position
+                          fTISTARFirstLayerStripPos[panelNb][i].y(),    // y position
+                          fTISTARFirstLayerStripPos[panelNb][i].z(),    // z position
+                          fTISTARFirstLayerStripStopped[panelNb][i]);    // is stopped?
+            nStripsAndRings++;
         }
-        for(int panel = 0; panel < 2; panel++) {
-            std::cout<<"layer: 1, panel: "<<panel<<std::endl;
-            std::cout<<" -> strip nHits: "<<int(fTISTARSecondLayerStripNb[panel].size())<<std::endl;
-            for(size_t i = 0; i < fTISTARSecondLayerStripNb[panel].size(); i++) {
-                std::cout<<" ---> hit: "<<i<<", edep: "<<fTISTARSecondLayerStripEnergy[panel][i]<<", strip: "<<fTISTARSecondLayerStripNb[panel][i]<<std::endl;
-            }
-            std::cout<<" -> ring nHits: "<<int(fTISTARSecondLayerRingNb[panel].size())<<std::endl;
-            for(size_t i = 0; i < fTISTARSecondLayerRingNb[panel].size(); i++) {
-                std::cout<<" ---> hit: "<<i<<", edep: "<<fTISTARSecondLayerRingEnergy[panel][i]<<", ring: "<<fTISTARSecondLayerRingNb[panel][i]<<std::endl;
-            }
+        // loop over all rings that have been hit
+        for(size_t i = 0; i < fTISTARFirstLayerRingNb[panelNb].size(); i++) {
+            part.AddRing(fTISTARFirstLayerRingNb[panelNb][i],           // ring number
+                          fTISTARFirstLayerRingEnergy[panelNb][i],      // energy
+                          fTISTARFirstLayerRingA[panelNb][i],           // particle A
+                          fTISTARFirstLayerRingZ[panelNb][i],           // particle Z
+                          fTISTARFirstLayerRingTrackID[panelNb][i],     // trackID
+                          fTISTARFirstLayerRingTime[panelNb][i],        // time
+                          fTISTARFirstLayerRingStopped[panelNb][i]);    // is stopped?
+            nStripsAndRings++;
         }
+        // only fill if we have at least one strip/ring activated
+        if(nStripsAndRings > 0) {
+            fTISTARFirstDeltaE[panelNb]->push_back(part);
+        }
+    }
+    // loop over all second-layer panels
+    for(int panelNb = 0; panelNb < 2; panelNb++) {
+        ParticleMC part;
+        int nStripsAndRings = 0;
+        // loop over all strips that have been hit
+        for(size_t i = 0; i < fTISTARSecondLayerStripNb[panelNb].size(); i++) {
+            part.AddStrip(fTISTARSecondLayerStripNb[panelNb][i],         // strip number
+                          fTISTARSecondLayerStripEnergy[panelNb][i],     // energy
+                          fTISTARSecondLayerStripA[panelNb][i],          // particle A
+                          fTISTARSecondLayerStripZ[panelNb][i],          // particle Z
+                          fTISTARSecondLayerStripTrackID[panelNb][i],    // trackID
+                          fTISTARSecondLayerStripTime[panelNb][i],       // time
+                          fTISTARSecondLayerStripPos[panelNb][i].x(),    // x position
+                          fTISTARSecondLayerStripPos[panelNb][i].y(),    // y position
+                          fTISTARSecondLayerStripPos[panelNb][i].z(),    // z position
+                          fTISTARSecondLayerStripStopped[panelNb][i]);    // is stopped?
+            nStripsAndRings++;
+        }
+        // loop over all rings that have been hit
+        for(size_t i = 0; i < fTISTARSecondLayerRingNb[panelNb].size(); i++) {
+            part.AddRing(fTISTARSecondLayerRingNb[panelNb][i],           // ring number
+                          fTISTARSecondLayerRingEnergy[panelNb][i],      // energy
+                          fTISTARSecondLayerRingA[panelNb][i],           // particle A
+                          fTISTARSecondLayerRingZ[panelNb][i],           // particle Z
+                          fTISTARSecondLayerRingTrackID[panelNb][i],     // trackID
+                          fTISTARSecondLayerRingTime[panelNb][i],        // time
+                          fTISTARSecondLayerRingStopped[panelNb][i]);    // is stopped?
+            nStripsAndRings++;
+        }
+        if(nStripsAndRings > 0) {
+            fTISTARSecondDeltaE[panelNb]->push_back(part);
+        }
+    }
+}
+
+void Converter::ClearTistarParticleMCs() {
+    for(int strip=0; strip<4; strip++) { 
+        for(auto particle : *(fTISTARFirstDeltaE[strip])) particle.ClearParticleMC();
+        fTISTARFirstDeltaE[strip]->clear();
+    }
+    for(int strip=0; strip<2; strip++) {
+        for(auto particle : *(fTISTARSecondDeltaE[strip])) particle.ClearParticleMC();
+        fTISTARSecondDeltaE[strip]->clear();
+    }
+    for(int strip=0; strip<2; strip++) {
+        for(auto particle : *(fTISTARPad[strip])) particle.ClearParticleMC();
+        fTISTARPad[strip]->clear();
+    }
 }
 
 void Converter::CreateTistarHistograms(Kinematics * transferP) {

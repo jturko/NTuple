@@ -66,12 +66,13 @@ private:
     void AddbackPaces();
     
     // TI-STAR
-    int CalculateStripNumber(int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim);
-    int CalculateRingNumber (int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim);
-    void CreateTistarHistograms(Kinematics*);
-    void ClearParticleMC();
+    int CalculateTistarStripNumber(int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim);
+    int CalculateTistarRingNumber (int layerNb, TVector3 particlePos, TVector3 stripPos, TVector3 stripDim);
+    void FillTistarVectors();
     void ClearTistarVectors();
-    void PrintTistarVectors();
+    void FillTistarParticleMCs();
+    void ClearTistarParticleMCs();
+    void CreateTistarHistograms(Kinematics*);
 
     void PrintStatistics();
 
