@@ -56,6 +56,7 @@ TVector3 HitSim::FirstPosition(bool doubleSidedFirstLayer, bool smear) {
 
 	// quadrant
 	int quadr = fFirstDeltaE->GetID();
+    int quadr2 = quadr%2; 
 	//std::cout<<" \n !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! first layer no: "<< quadr << std::endl;
 
 	// strip number = perpendicular to beam direction
@@ -103,13 +104,15 @@ TVector3 HitSim::FirstPosition(bool doubleSidedFirstLayer, bool smear) {
 	    //x       +pos    +dtb    -pos    -dtb
 	    //y       +dtb    -pos    -dtb    +pos
     	
-    
-        // assuming the strips in the first layer run perpindicular to the beam axis (up/down in the y-dir)
-        // therefore we take the y-position as the center of the strip
-        y = fTRexSett->GetLayerPositionVector()[0][quadr].y();
 
         // the x-position should just be the distance to the beam
         x = fTRexSett->GetLayerPositionVector()[0][quadr].x();
+    
+        // assuming the strips in the first layer run perpindicular to the beam axis (up/down in the y-dir)
+        // therefore we take the y-position as the center of the strip
+        //y = fTRexSett->GetLayerPositionVector()[0][quadr].y();
+        // calculate the first position based on the second position and its intersection with the target
+        y = fSecondPosition.Y()*fTRexSett->GetLayerPositionVector()[0][quadr].x()/fTRexSett->GetLayerPositionVector()[1][quadr2].x();
 
 	    //switch(quadr) {
 	    //case 0:
