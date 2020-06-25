@@ -216,8 +216,6 @@ private:
     Int_t    fTISTARGenReaction;
     
     std::vector<Particle> * fTISTARParticleVector;
-
-    TChain fTISTARDetChain;
     std::vector<ParticleMC>* fTISTARFirstDeltaE[4];
     std::vector<ParticleMC>* fTISTARSecondDeltaE[2];
     std::vector<ParticleMC>* fTISTARPad[2];

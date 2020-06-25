@@ -36,9 +36,6 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
         std::string generator_ntuple_name = *fileName + fSettings->TISTARGenNtupleName();
         fTISTARGenChain.Add(generator_ntuple_name.c_str());
 
-        //std::string detector_ntuple_name = *fileName + fSettings->TISTARDetNtupleName();
-        //fTISTARDetChain.Add(detector_ntuple_name.c_str());
-
         fRandom.SetSeed(1);
         if(!trex_settings) {
             trex_settings = static_cast<TistarSettings*>(fChain.GetFile()->Get("settings"));
@@ -606,19 +603,6 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fTISTARGenChain.SetBranchAddress("recoilPhi",           &fTISTARGenRecoilPhi);
     fTISTARGenChain.SetBranchAddress("recoilEnergy",        &fTISTARGenRecoilEnergy);
     fTISTARGenChain.SetBranchAddress("reaction",            &fTISTARGenReaction);
-
-    //// treeDet
-    //// layer 1
-    //fTISTARDetChain.SetBranchAddress("TistarSiLayer1Strip1_MC", &fTISTARFirstDeltaE[0]); // forward (+z), +x
-    //fTISTARDetChain.SetBranchAddress("TistarSiLayer1Strip2_MC", &fTISTARFirstDeltaE[1]); // forward (+z), -x
-    //fTISTARDetChain.SetBranchAddress("TistarSiLayer1Strip3_MC", &fTISTARFirstDeltaE[2]); // backward (-z), +x
-    //fTISTARDetChain.SetBranchAddress("TistarSiLayer1Strip4_MC", &fTISTARFirstDeltaE[3]); // backward (-z), -z
-    //// layer 2
-    //fTISTARDetChain.SetBranchAddress("TistarSiLayer2Strip1_MC", &fTISTARSecondDeltaE[0]);
-    //fTISTARDetChain.SetBranchAddress("TistarSiLayer2Strip2_MC", &fTISTARSecondDeltaE[1]);
-    //// layer3
-    //fTISTARDetChain.SetBranchAddress("TistarSiLayer3Strip1_MC", &fTISTARPad[0]);
-    //fTISTARDetChain.SetBranchAddress("TistarSiLayer3Strip2_MC", &fTISTARPad[1]);
     
     //create output file
     fOutput = new TFile(outputFileName.c_str(),"recreate");
@@ -777,7 +761,6 @@ bool Converter::Run() {
     bool doubleSidedFirstLayer = false;    
 
     TistarSettings * sett = fSettings->GetTistarSettings();
-    long int nEntriesDet = fTISTARDetChain.GetEntries();
     
     std::cout<<"beam N = "<<sett->GetProjectileA()-sett->GetProjectileZ()<<", Z = "<<sett->GetProjectileZ()
         << " on target N = "<<sett->GetTargetA()-sett->GetTargetZ()<<", Z = "<<sett->GetTargetZ()<<std::endl;
