@@ -9,6 +9,7 @@
 #include "LightYield.hh"
 
 #include "TistarSettings.hh"
+#include "ParticleMC.hh"
 
 #include "HitSim.hh"
 #include "Compound.hh"

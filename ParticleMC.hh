@@ -4,11 +4,11 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
-#include "TObject.h"
+//#include "TObject.h"
 #include "math.h"
 
 
-class ParticleMC : public TObject {
+class ParticleMC { // : public TObject {
 	public:
 		ParticleMC() {
 			ClearParticleMC();
@@ -213,7 +213,7 @@ class ParticleMC : public TObject {
 		double fRear;
 		double fEdet;
 
-		ClassDef(ParticleMC, 1);
+		//ClassDef(ParticleMC, 1);
 };
 
 #endif
