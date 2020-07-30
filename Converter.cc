@@ -44,6 +44,10 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
         }
     }
  
+    fTISTARGenGammaEnergy = 0;
+    fTISTARGenGammaTheta = 0;
+    fTISTARGenGammaPhi = 0;
+
     for(int i=0; i<4; i++) fTISTARFirstDeltaE[i] = new std::vector<ParticleMC>;
     for(int i=0; i<2; i++) fTISTARSecondDeltaE[i] = new std::vector<ParticleMC>;
     for(int i=0; i<2; i++) fTISTARPad[i] = new std::vector<ParticleMC>;
@@ -602,8 +606,18 @@ Converter::Converter(std::vector<std::string>& inputFileNames, const std::string
     fTISTARGenChain.SetBranchAddress("recoilTheta",         &fTISTARGenRecoilTheta);
     fTISTARGenChain.SetBranchAddress("recoilPhi",           &fTISTARGenRecoilPhi);
     fTISTARGenChain.SetBranchAddress("recoilEnergy",        &fTISTARGenRecoilEnergy);
+    fTISTARGenChain.SetBranchAddress("ejectileTheta",       &fTISTARGenEjectileTheta);
+    fTISTARGenChain.SetBranchAddress("ejectilePhi",         &fTISTARGenEjectilePhi);
+    fTISTARGenChain.SetBranchAddress("ejectileEnergy",      &fTISTARGenEjectileEnergy);
     fTISTARGenChain.SetBranchAddress("reaction",            &fTISTARGenReaction);
     
+    TBranch * branchGammaEnergy = 0;
+    TBranch * branchGammaTheta = 0;
+    TBranch * branchGammaPhi = 0;
+    fTISTARGenChain.SetBranchAddress("gammaEnergy", &fTISTARGenGammaEnergy, &branchGammaEnergy);
+    fTISTARGenChain.SetBranchAddress("gammaTheta",  &fTISTARGenGammaTheta,  &branchGammaTheta);
+    fTISTARGenChain.SetBranchAddress("gammaPhi",    &fTISTARGenGammaPhi,    &branchGammaPhi);
+
     //create output file
     fOutput = new TFile(outputFileName.c_str(),"recreate");
     if(!fOutput->IsOpen()) {
@@ -901,6 +915,8 @@ bool Converter::Run() {
     double dE2MeasMinRec;
 
     UInt_t nofLevels = fTISTARGenChain.GetMaximum("reaction")+1;
+
+    TRandom3 rndm;
     
     CreateTistarHistograms(transferP);
 
@@ -1630,7 +1646,14 @@ bool Converter::Run() {
                            fTISTARGenChain.GetFile()->GetName()<<" doesn't exist"<<std::endl;
                 return false;
             }
-        
+
+            if(fSettings->VerbosityLevel() > 1) {
+                std::cout<<" # of gamma rays in this event: "<<fTISTARGenGammaEnergy->size()<<std::endl;
+                for(size_t i=0; i<fTISTARGenGammaEnergy->size(); ++i) {
+                    std::cout<<" gamma #: "<<i<<", energy: "<<fTISTARGenGammaEnergy->at(i)<<", theta: "<<fTISTARGenGammaTheta->at(i)<<", phi: "<<fTISTARGenGammaPhi->at(i)<<std::endl;
+                }
+            }        
+
             // push the data collected in the tistar vectors that we fill from looping over the normal "hits" saved 
             // in the ntuple (see FillTistarVectors method) into the ParticleMC vectors we use for the analysis
             FillTistarParticleMCs();
@@ -2104,6 +2127,24 @@ bool Converter::Run() {
                 //if(0 <= fTISTARGenReaction && fTISTARGenReaction < nofLevels) Get2DHistogram(Form("excEnElossVsThetaLevel_%d",fTISTARGenReaction),"TistarAnalysis")->Fill(recoilThetaRec, excEnergy);
                 //if(0 <= reactionSim && reactionSim < nofLevels-1) excEnProtonVsTheta->Fill(recoilThetaRec, excEnergy);//leila 
 
+                // gamma stuff 
+                size_t gammaSize = fTISTARGenGammaEnergy->size();
+                // doppler correction
+                double gamma = (ejectile->GetMass()+fTISTARGenEjectileEnergy/1000.)/ejectile->GetMass();
+                double beta = TMath::Sqrt(1.-TMath::Power(1./gamma, 2.));
+                double eGammaDoppCorr, resolvedEnergy;
+                for(size_t i=0; i<gammaSize; i++) {
+                    Get1DHistogram("gammaSpec","TistarAnalysis")->Fill(fTISTARGenGammaEnergy->at(i));
+                    Get2DHistogram("excEnProtonVsGamma","TistarAnalysis")->Fill(fTISTARGenGammaEnergy->at(i),excEnergy);
+                    
+                    eGammaDoppCorr = (1.-beta*TMath::Cos(fTISTARGenGammaTheta->at(i)))/TMath::Sqrt(1.-beta*beta)*fTISTARGenGammaEnergy->at(i); 
+                    Get1DHistogram("gammaSpecDoppCorr","TistarAnalysis")->Fill(eGammaDoppCorr);
+                    Get2DHistogram("excEnProtonVsGammaDoppCorr","TistarAnalysis")->Fill(eGammaDoppCorr, excEnergy);
+
+                    resolvedEnergy = rndm.Gaus(eGammaDoppCorr,eGammaDoppCorr*0.01/(2.*TMath::Sqrt(2.*TMath::Log(2.))));
+                    Get1DHistogram("gammaSpecDoppCorrRes","TistarAnalysis")->Fill(resolvedEnergy);
+                    Get2DHistogram("excEnProtonVsGammaDoppCorrRes","TistarAnalysis")->Fill(resolvedEnergy, excEnergy);
+                }
 
             } // end mult = 1 events
 
@@ -3455,6 +3496,17 @@ void Converter::CreateTistarHistograms(Kinematics * transferP) {
     for(size_t r = 0; r < nofLevels; ++r) {
         excEnElossVsThetaLevel[r] = new TH2F(Form("excEnElossVsThetaLevel_%d",static_cast<int>(r)), Form("Excitation Energy Spectrum from reconstructed energy loss for level %d;#vartheta_{lab}[^{o}];E_{exc} [keV]",static_cast<int>(r)), 180, 0., 180., 5000, -20000, 20000); fHistograms[directoryName.c_str()]->Add(excEnElossVsThetaLevel[r]);
     }
+
+    // particle-gamma matrices
+    TH1F* gammaSpec = new TH1F("gammaSpec", "generated gamma-ray spectrum", 5000, 0, 5000); fHistograms[directoryName.c_str()]->Add(gammaSpec);
+    TH1F* gammaSpecDoppCorr = new TH1F("gammaSpecDoppCorr", "generated gamma-ray spectrum with doppler correction", 5000, 0, 5000); fHistograms[directoryName.c_str()]->Add(gammaSpecDoppCorr);
+    TH1F* gammaSpecDoppCorrRes = new TH1F("gammaSpecDoppCorrRes", "generated gamma-ray spectrum with doppler correction w/ 1% resolution applied", 5000, 0, 5000); fHistograms[directoryName.c_str()]->Add(gammaSpecDoppCorrRes);
+
+    TH2F* excEnProtonVsGamma = new TH2F("excEnProtonVsGamma", "Excitation Energy Spectrum from reconstructed Protons vs gamma ray energy", 2500, 0, 5000, 5000, -5000, 5000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsGamma);
+    TH2F* excEnProtonVsGammaDoppCorr = new TH2F("excEnProtonVsGammaDoppCorr", "Excitation Energy Spectrum from reconstructed Protons vs gamma ray energy w/ doppler corrections", 2500, 0, 5000, 5000, -5000, 5000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsGammaDoppCorr);
+    TH2F* excEnProtonVsGammaDoppCorrRes = new TH2F("excEnProtonVsGammaDoppCorrRes", "Excitation Energy Spectrum from reconstructed Protons vs gamma ray energy w/ doppler corrections and 1% resolution applied", 2500, 0, 5000, 5000, -5000, 5000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsGammaDoppCorrRes);
+
+
 }
 
 

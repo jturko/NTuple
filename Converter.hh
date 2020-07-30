@@ -213,8 +213,14 @@ private:
     Double_t fTISTARGenRecoilTheta;
     Double_t fTISTARGenRecoilPhi;
     Double_t fTISTARGenRecoilEnergy;
+    Double_t fTISTARGenEjectileTheta;
+    Double_t fTISTARGenEjectilePhi;
+    Double_t fTISTARGenEjectileEnergy;
     Int_t    fTISTARGenReaction;
-    
+    std::vector<Double_t>* fTISTARGenGammaEnergy;    
+    std::vector<Double_t>* fTISTARGenGammaTheta;    
+    std::vector<Double_t>* fTISTARGenGammaPhi;    
+
     std::vector<Particle> * fTISTARParticleVector;
     std::vector<ParticleMC>* fTISTARFirstDeltaE[4];
     std::vector<ParticleMC>* fTISTARSecondDeltaE[2];
