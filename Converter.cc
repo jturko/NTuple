@@ -2043,6 +2043,11 @@ bool Converter::Run() {
                 Get2DHistogram("dE1VsdE2","TistarAnalysis")->Fill(hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()-1), hit->GetSecondDeltaEEnergy(fSettings->VerbosityLevel()-1));//(firstDeltaE[index_first]->at(0)).GetRear() );
                 Get2DHistogram("eVsTheta","TistarAnalysis")->Fill(recoilThetaRec, recoilEnergyRec);
                 Get2DHistogram("eVsZ","TistarAnalysis")->Fill(vertex.Z(), recoilEnergyRec);
+                
+                if(recoilThetaRec > 45. && recoilThetaRec < 55.) 
+                    Get2DHistogram("dE1VsE_theta_45_55","TistarAnalysis")->Fill(recoilEnergyRec, hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()-1));//(firstDeltaE[index_first]->at(0)).GetRear() );
+                if(recoilThetaRec > 115. && recoilThetaRec < 125.) 
+                    Get2DHistogram("dE1VsE_theta_115_125","TistarAnalysis")->Fill(recoilEnergyRec, hit->GetFirstDeltaEEnergy(fSettings->VerbosityLevel()-1));//(firstDeltaE[index_first]->at(0)).GetRear() );
 
                 Get2DHistogram("eRecErrVsESim","TistarAnalysis")->Fill(fTISTARGenRecoilEnergy, recoilEnergyRec - fTISTARGenRecoilEnergy);
                 Get2DHistogram("thetaErrorVsZ","TistarAnalysis")->Fill(vertex.Z(), recoilThetaRec - recoilThetaSim);
@@ -3412,6 +3417,8 @@ void Converter::CreateTistarHistograms(Kinematics * transferP) {
     TH2F* dE12VsPad = new TH2F("dE12VsPad", "energy loss first+second layer vs. pad energy", 2000, 0, 50000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE12VsPad);
     TH2F* dE12VsE = new TH2F("dE12VsE", "energy loss first+second layer vs. total energy", 2000, 0, 50000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE12VsE);
     TH2F* dE1VsE = new TH2F("dE1VsE", "energy loss first layer vs. total energy", 5000, 0, 50000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE1VsE);
+    TH2F* dE1VsE_theta_45_55 = new TH2F("dE1VsE_theta_45_55", "energy loss first layer vs. total energy", 5000, 0, 50000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE1VsE_theta_45_55);
+    TH2F* dE1VsE_theta_115_125 = new TH2F("dE1VsE_theta_115_125", "energy loss first layer vs. total energy", 5000, 0, 50000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE1VsE_theta_115_125);
     TH2F* dE2VsE = new TH2F("dE2VsE", "energy loss second layer vs. total energy", 5000, 0, 50000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE2VsE);
     TH2F* dE1VsdE2 = new TH2F("dE1VsdE2", "energy loss second layer vs. energy loss first layer", 1000, 0, 10000, 1000, 0, 10000); fHistograms[directoryName.c_str()]->Add(dE1VsdE2);
     TH2F* eVsTheta = new TH2F("eVsTheta", "recoil energy vs. theta (lab)", 360, 0, 180, 1000, 0, 25000); fHistograms[directoryName.c_str()]->Add(eVsTheta);
@@ -3498,13 +3505,13 @@ void Converter::CreateTistarHistograms(Kinematics * transferP) {
     }
 
     // particle-gamma matrices
-    TH1F* gammaSpec = new TH1F("gammaSpec", "generated gamma-ray spectrum", 5000, 0, 5000); fHistograms[directoryName.c_str()]->Add(gammaSpec);
-    TH1F* gammaSpecDoppCorr = new TH1F("gammaSpecDoppCorr", "generated gamma-ray spectrum with doppler correction", 5000, 0, 5000); fHistograms[directoryName.c_str()]->Add(gammaSpecDoppCorr);
-    TH1F* gammaSpecDoppCorrRes = new TH1F("gammaSpecDoppCorrRes", "generated gamma-ray spectrum with doppler correction w/ 1% resolution applied", 5000, 0, 5000); fHistograms[directoryName.c_str()]->Add(gammaSpecDoppCorrRes);
+    TH1F* gammaSpec = new TH1F("gammaSpec", "generated gamma-ray spectrum", 10000, 0, 10000); fHistograms[directoryName.c_str()]->Add(gammaSpec);
+    TH1F* gammaSpecDoppCorr = new TH1F("gammaSpecDoppCorr", "generated gamma-ray spectrum with doppler correction", 10000, 0, 10000); fHistograms[directoryName.c_str()]->Add(gammaSpecDoppCorr);
+    TH1F* gammaSpecDoppCorrRes = new TH1F("gammaSpecDoppCorrRes", "generated gamma-ray spectrum with doppler correction w/ 1% resolution applied", 10000, 0, 10000); fHistograms[directoryName.c_str()]->Add(gammaSpecDoppCorrRes);
 
-    TH2F* excEnProtonVsGamma = new TH2F("excEnProtonVsGamma", "Excitation Energy Spectrum from reconstructed Protons vs gamma ray energy", 2500, 0, 5000, 5000, -5000, 5000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsGamma);
-    TH2F* excEnProtonVsGammaDoppCorr = new TH2F("excEnProtonVsGammaDoppCorr", "Excitation Energy Spectrum from reconstructed Protons vs gamma ray energy w/ doppler corrections", 2500, 0, 5000, 5000, -5000, 5000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsGammaDoppCorr);
-    TH2F* excEnProtonVsGammaDoppCorrRes = new TH2F("excEnProtonVsGammaDoppCorrRes", "Excitation Energy Spectrum from reconstructed Protons vs gamma ray energy w/ doppler corrections and 1% resolution applied", 2500, 0, 5000, 5000, -5000, 5000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsGammaDoppCorrRes);
+    TH2F* excEnProtonVsGamma = new TH2F("excEnProtonVsGamma", "Excitation Energy Spectrum from reconstructed Protons vs gamma ray energy", 5000, 0, 10000, 5000, -10000, 10000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsGamma);
+    TH2F* excEnProtonVsGammaDoppCorr = new TH2F("excEnProtonVsGammaDoppCorr", "Excitation Energy Spectrum from reconstructed Protons vs gamma ray energy w/ doppler corrections", 5000, 0, 10000, 5000, -10000, 10000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsGammaDoppCorr);
+    TH2F* excEnProtonVsGammaDoppCorrRes = new TH2F("excEnProtonVsGammaDoppCorrRes", "Excitation Energy Spectrum from reconstructed Protons vs gamma ray energy w/ doppler corrections and 1% resolution applied", 5000, 0, 10000, 5000, -10000, 10000); fHistograms[directoryName.c_str()]->Add(excEnProtonVsGammaDoppCorrRes);
 
 
 }
